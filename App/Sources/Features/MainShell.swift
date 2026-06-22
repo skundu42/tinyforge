@@ -62,14 +62,10 @@ struct MainShell: View {
 
     private var brand: some View {
         HStack(spacing: Theme.Space.m) {
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(Theme.brandGradient)
-                .frame(width: 32, height: 32)
-                .overlay(
-                    Image(systemName: "sparkle")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Theme.sparkGradient))
-                .shadow(color: Theme.accent.opacity(0.35), radius: 5, y: 2)
+            Image("AppLogo")
+                .resizable().interpolation(.high)
+                .frame(width: 36, height: 36)
+                .shadow(color: Theme.accent.opacity(0.3), radius: 4, y: 2)
             VStack(alignment: .leading, spacing: 0) {
                 Text("TinyForge").font(Theme.rounded(17, .bold))
                 Text("Local ML studio").font(.system(size: 10)).foregroundStyle(.secondary)

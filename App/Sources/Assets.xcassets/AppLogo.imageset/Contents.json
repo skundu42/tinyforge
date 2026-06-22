@@ -1,0 +1,23 @@
+{
+  "images": [
+    {
+      "idiom": "universal",
+      "scale": "1x",
+      "filename": "logo_128.png"
+    },
+    {
+      "idiom": "universal",
+      "scale": "2x",
+      "filename": "logo_256.png"
+    },
+    {
+      "idiom": "universal",
+      "scale": "3x",
+      "filename": "logo_384.png"
+    }
+  ],
+  "info": {
+    "version": 1,
+    "author": "tinyforge"
+  }
+}

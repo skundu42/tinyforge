@@ -27,13 +27,9 @@ struct BackendStatusView: View {
 
     var body: some View {
         VStack(spacing: Theme.Space.xl) {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Theme.brandGradient)
-                .frame(width: 88, height: 88)
-                .overlay(
-                    Image(systemName: "sparkle")
-                        .font(.system(size: 40, weight: .bold))
-                        .foregroundStyle(Theme.sparkGradient))
+            Image("AppLogo")
+                .resizable().interpolation(.high)
+                .frame(width: 104, height: 104)
                 .shadow(color: Theme.accent.opacity(0.4), radius: 16, y: 6)
 
             VStack(spacing: Theme.Space.s) {
