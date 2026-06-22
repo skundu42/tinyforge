@@ -12,7 +12,7 @@ A native macOS studio for the whole local ML loop: browse a model, build a datas
 [![Swift](https://img.shields.io/badge/Swift-6.3-F05138?style=flat-square&logo=swift&logoColor=white)](https://swift.org)
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![MLX](https://img.shields.io/badge/MLX-Apple%20Silicon-6E56CF?style=flat-square)](https://github.com/ml-explore/mlx)
-[![Tests](https://img.shields.io/badge/tests-158%20passing-2FB67C?style=flat-square)](#testing)
+[![Tests](https://img.shields.io/badge/tests-160%20passing-2FB67C?style=flat-square)](#testing)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
 <img src="docs/screenshots/home.png" width="760" alt="TinyForge home — the forge journey" />
@@ -33,9 +33,9 @@ Everything runs locally. Your data never leaves your machine.
 
 - 🔍 **Model browser** — search HuggingFace, view files & READMEs, and download with a live progress bar (Xet-accelerated). See what you've already downloaded at a glance.
 - 🧱 **Dataset builder** — import HuggingFace datasets or local JSON/CSV/Parquet, preview rows, map columns into chat / instruction / completion formats, inspect token-length distributions, and split into train/validation.
-- ⚡ **Finetuning on the GPU** — LoRA / QLoRA / DoRA / full finetuning via **mlx-lm**, plus a from-scratch **PyTorch/MPS** engine — with **live dashboards** (loss, throughput, peak memory) and GPU/thermal telemetry.
-- ✨ **Inference playground** — stream generations with sampling controls and compare **base vs. finetuned** side by side.
-- 📦 **Export & share** — fuse adapters and export to **safetensors**, **MLX (quantized)**, or **GGUF**, and push straight to the Hub with an auto-generated model card.
+- ⚡ **Finetuning on the GPU** — LoRA / QLoRA / DoRA / full finetuning via **mlx-lm**, a from-scratch **PyTorch/MPS** engine, and a **vision** engine (ViT image classifier via HuggingFace Trainer) — all with **live dashboards** (loss, throughput, peak memory) and GPU/thermal telemetry.
+- ✨ **Inference playground** — stream generations with sampling controls, compare **base vs. finetuned** side by side, and optionally run **natively in Swift** via MLX-Swift (no Python round-trip).
+- 📦 **Export & share** — fuse adapters and export to **safetensors**, **MLX (quantized)**, **GGUF**, or **Core ML** (`.mlpackage`), and push straight to the Hub with an auto-generated model card.
 - 🗂️ **Experiment tracking** — every run, dataset, and export is recorded locally (SQLite) and browsable.
 - 📥 **Self-contained** — ships as a signed, notarizable `.app` with a bundled Python runtime. Nothing to install.
 
@@ -58,14 +58,14 @@ Everything runs locally. Your data never leaves your machine.
 
 - **Apple Silicon** Mac (M1 or later) — MLX and the MPS backend require it.
 - **macOS 15+**.
-- For development: **Xcode 26+**, [`xcodegen`](https://github.com/yonsm/XcodeGen), and [`uv`](https://github.com/astral-sh/uv).
+- For development: **Xcode 26+**, [`xcodegen`](https://github.com/yonsm/XcodeGen), and [`uv`](https://github.com/astral-sh/uv). The first build downloads the **Metal Toolchain** (`xcodebuild -downloadComponent MetalToolchain`) for MLX-Swift's shaders.
 
 ## Quick start
 
 ### Run a release build
 
 ```bash
-git clone <repo-url> tinyforge && cd tinyforge
+git clone github.com/skundu42/tinyforge && cd tinyforge
 scripts/build_release.sh          # bundles Python, builds, signs → TinyForge.app
 open build/Build/Products/Release/TinyForge.app
 ```
@@ -82,41 +82,13 @@ cd App && xcodegen generate && open TinyForge.xcodeproj   # then ⌘R
 
 In a debug build, the app finds the dev Python environment automatically — no bundling needed.
 
-## Architecture
-
-TinyForge is a native **SwiftUI** app talking to an embedded **Python** ML service over a loopback API. Heavy or crash-prone work (training, exports) runs as **isolated worker subprocesses**, so a native segfault never takes down the UI.
-
-```
-┌──────────────────────────────────────────────┐
-│  SwiftUI app (Swift 6, strict concurrency)    │
-│  Home · Models · Datasets · Finetune ·        │
-│  Playground · Export · Settings               │
-│  Metal / thermal telemetry                    │
-└───────────────▲───────────────────┬───────────┘
-   REST + WebSocket                 │ spawn / lifecycle
-   (127.0.0.1, ephemeral port,      │ (swift Process, watchdog)
-    per-launch bearer token)        ▼
-┌──────────────────────────────────────────────┐
-│  Python orchestrator (FastAPI / uvicorn)      │
-│  hub · datasets · train · infer · export      │
-│  SQLite registries                            │
-└───────────────┬──────────────────────────────┘
-   spawns one isolated child per job
-   ┌────────────┴───────────────┐
-   ▼                            ▼
- mlx_lm.lora                  torch (MPS)
- fuse / convert / generate    from-scratch
-```
-
-The whole thing ships self-contained: a relocatable [python-build-standalone](https://github.com/astral-sh/python-build-standalone) interpreter (with torch/mlx/transformers) is bundled inside the `.app` and signed inside-out for notarization. See [`docs/packaging.md`](docs/packaging.md).
-
 ## Tech stack
 
 | Layer | Tools |
 |-------|-------|
-| **App** | SwiftUI · Swift 6.3 · Swift Charts · swift-subprocess · XcodeGen |
+| **App** | SwiftUI · Swift 6.3 · Swift Charts · swift-subprocess · mlx-swift-lm · XcodeGen |
 | **Backend** | FastAPI · uvicorn · pydantic · uv |
-| **ML** | MLX · mlx-lm · PyTorch (MPS) · transformers · datasets · tokenizers |
+| **ML** | MLX · mlx-lm · PyTorch (MPS) · transformers · accelerate · datasets · coremltools |
 | **Hub** | huggingface_hub (Xet) |
 | **Packaging** | python-build-standalone · codesign · notarytool |
 
@@ -148,30 +120,14 @@ The whole thing ships self-contained: a relocatable [python-build-standalone](ht
 The project is built test-first. Logic is unit-tested with fakes; each milestone is verified end-to-end against the real toolchain (live HuggingFace, a real MLX finetune, a real MPS run, a real fuse, a bundled-runtime launch).
 
 ```bash
-# Backend (112 tests)
+# Backend (114 tests)
 cd backend && uv run pytest
 
-# App (46 tests)
-cd App && xcodebuild test -scheme TinyForge -destination 'platform=macOS'
+# App (46 tests; -skipMacroValidation for the MLX-Swift macros)
+cd App && xcodebuild test -scheme TinyForge -destination 'platform=macOS' -skipMacroValidation
 ```
 
 Network/heavy end-to-end tests are opt-in: `touch .run-network-tests` to enable them.
-
-## Roadmap
-
-| Milestone | Status |
-|-----------|--------|
-| M0 — Foundations (SwiftUI ⇄ embedded Python) | ✅ |
-| M1 — HuggingFace Hub browse/download | ✅ |
-| M2 — Dataset builder | ✅ |
-| M3 — MLX LoRA finetuning + live dashboards | ✅ |
-| M4 — Inference playground | ✅ |
-| M5 — Exports (safetensors / MLX / GGUF) + push to Hub | ✅ |
-| M6 — PyTorch/MPS engine | ✅ |
-| M7 — Bundled Python + notarized DMG | ✅ |
-| Core ML export · HF Trainer (vision/audio) · native MLX-Swift inference | 🔜 |
-
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for details on what each milestone delivered.
 
 ## Contributing
 

@@ -12,6 +12,7 @@ final class PlaygroundModel {
     var maxTokens = 200
     var temp = 0.7
     var topP = 0.9
+    var runNative = false  // run in Swift via MLX-Swift instead of the Python backend
 
     private(set) var cachedModels: [CachedRepo] = []
     private(set) var runs: [RunRecord] = []
@@ -22,14 +23,21 @@ final class PlaygroundModel {
 
     private let api: any BackendAPI
     private let infer: any InferenceStreaming
+    private let nativeInfer: any InferenceStreaming
 
-    init(api: any BackendAPI, infer: any InferenceStreaming) {
+    init(
+        api: any BackendAPI, infer: any InferenceStreaming,
+        nativeInfer: (any InferenceStreaming)? = nil
+    ) {
         self.api = api
         self.infer = infer
+        self.nativeInfer = nativeInfer ?? infer
     }
 
     var canGenerate: Bool { !modelRepo.isEmpty && !prompt.isEmpty && !generating }
     var hasAdapter: Bool { !adapterRunId.isEmpty }
+    // Native runs base-only; the side-by-side comparison uses the backend path.
+    var showsComparison: Bool { hasAdapter && !runNative }
     var selectedRun: RunRecord? { runs.first { $0.id == adapterRunId } }
 
     func loadInputs() async {
@@ -44,19 +52,25 @@ final class PlaygroundModel {
         adapterOutput = ""
         defer { generating = false }
 
-        await runStream(adapterPath: nil) { [weak self] token in self?.baseOutput += token }
-        if let run = selectedRun {
-            await runStream(adapterPath: run.adapterPath) { [weak self] token in
+        let baseStreamer: any InferenceStreaming = runNative ? nativeInfer : infer
+        await runStream(streamer: baseStreamer, adapterPath: nil) { [weak self] token in
+            self?.baseOutput += token
+        }
+        if !runNative, let run = selectedRun {
+            await runStream(streamer: infer, adapterPath: run.adapterPath) { [weak self] token in
                 self?.adapterOutput += token
             }
         }
     }
 
-    private func runStream(adapterPath: String?, append: @escaping @MainActor (String) -> Void) async {
+    private func runStream(
+        streamer: any InferenceStreaming, adapterPath: String?,
+        append: @escaping @MainActor (String) -> Void
+    ) async {
         let request = GenRequest(
             modelRepo: modelRepo, adapterPath: adapterPath, prompt: prompt,
             maxTokens: maxTokens, temp: temp, topP: topP)
-        for await event in infer.stream(request) {
+        for await event in streamer.stream(request) {
             switch event {
             case .token(let text): append(text)
             case .failed(let message): error = message

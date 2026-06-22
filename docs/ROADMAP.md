@@ -132,8 +132,9 @@ Export a finetune to a standalone model and share it.
 - **Verified**: a real fuse → safetensors export produces a complete HF-format
   model (`model.safetensors` + `config.json` + tokenizer).
 
-> Core ML export is deferred: converting MLX/HF weights via coremltools needs a
-> traceable PyTorch path and is a larger effort; planned for a later pass.
+> Core ML export now lands in **M8** (below) for the traceable engines —
+> from-scratch PyTorch and HF-Trainer vision runs; LLM/MLX adapters stay out of
+> scope for it.
 
 Backend: 111 pytest tests. App: 44 Swift Testing tests.
 
@@ -152,9 +153,9 @@ A second engine — PyTorch on the MPS GPU — proving the dual-engine design.
 - **Verified**: a real torch/MPS run completes with loss decreasing
   (0.75 → 0.05) and saves `model.pt`, streamed through the existing dashboards.
 
-> This establishes the engine + event contract. HF Trainer (vision/audio) and
-> TRL (SFT/DPO) workers plug in as additional engines emitting the same events;
-> from-scratch on MPS is the representative path built and verified here.
+> This establishes the engine + event contract. The HF Trainer (vision) engine
+> lands in **M8** (below), plugging in as an additional engine emitting the same
+> events; from-scratch on MPS is the representative path built and verified here.
 
 Backend: 112 pytest tests. App: 45 Swift Testing tests.
 
@@ -175,6 +176,35 @@ A self-contained, distributable app.
   (Notarization itself needs your Apple ID credentials; see `docs/packaging.md`.)
 
 App: 45 Swift Testing tests. Backend: 112 pytest tests.
+
+## M8 — delivered
+
+The three post-M7 extensions, each reusing the established contracts.
+
+- **HF Trainer vision engine** (`tinyforge/train/vision_worker.py`): a `vision`
+  engine that finetunes a small **ViT image classifier** on the MPS GPU via
+  `transformers.Trainer` on a synthetic learnable image task, emitting the
+  **same parser-format events** as the other engines — so it reuses the run
+  registry, WebSocket stream, and live dashboards. `build_command` branches
+  torch/vision; the Finetune tab adds a *Vision (HF)* engine. Added `accelerate`.
+  **Verified**: a real run, loss 0.83 → 0.69, HF model saved.
+- **Core ML export** (`tinyforge/export/coreml.py`): a `coreml` export target
+  that converts a run's saved, traceable model to a **`.mlpackage`** via
+  coremltools (`jit.trace`) — from-scratch PyTorch runs (`model.pt`) and vision
+  runs (HF model dir). `torch_worker` now saves the whole module (CPU) so it's
+  traceable; `ExportManager` gains an injectable `coreml_fn` + branch; the Export
+  tab adds the **Core ML** format. **Verified**: a real torch run → valid
+  `.mlpackage` end-to-end.
+- **Native MLX-Swift inference** (`App/Sources/Backend/NativeInferenceClient.swift`):
+  LLM generation **natively in Swift** via **mlx-swift-lm 3.x** (+ mlx-swift,
+  swift-transformers, swift-huggingface), loading a model from the shared
+  HuggingFace cache by repo id and streaming `.chunk` tokens — no Python
+  round-trip. The Playground adds a **Run on: Backend / Native (MLX)** toggle
+  (native is base-model only). Requires the Metal Toolchain and
+  `-skipMacroValidation` (macro-based loaders). **Verified**: a gated Swift test
+  loads the cached SmolLM and generates natively in ~2 s.
+
+App: 46 Swift Testing tests (+1 opt-in native). Backend: 114 pytest tests.
 
 ## Conventions
 - TDD: tests first (see `backend/tests/`, `App/Tests/`).

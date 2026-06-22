@@ -30,6 +30,13 @@ struct PlaygroundView: View {
                             Text("None (base only)").tag("")
                             ForEach(model.runs) { Text($0.name).tag($0.id) }
                         }
+                        .disabled(model.runNative)
+                        Picker("Run on", selection: $model.runNative) {
+                            Text("Backend").tag(false)
+                            Text("Native (MLX)").tag(true)
+                        }
+                        .fixedSize()
+                        .help("Native runs generation in Swift via MLX-Swift (base model only).")
                     }
                 }
 
@@ -85,8 +92,8 @@ struct PlaygroundView: View {
 
     private var outputs: some View {
         HStack(spacing: 0) {
-            outputPane(title: model.hasAdapter ? "Base" : "Output", text: model.baseOutput, accent: false)
-            if model.hasAdapter {
+            outputPane(title: model.showsComparison ? "Base" : "Output", text: model.baseOutput, accent: false)
+            if model.showsComparison {
                 Divider()
                 outputPane(title: "Finetuned", text: model.adapterOutput, accent: true)
             }

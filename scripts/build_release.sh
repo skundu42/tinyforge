@@ -16,7 +16,7 @@ echo "==> [1/5] bundle Python runtime (if missing)"
 echo "==> [2/5] build the app (Release)"
 ( cd "$ROOT/App" && xcodegen generate >/dev/null && \
   xcodebuild build -project TinyForge.xcodeproj -scheme TinyForge \
-    -configuration Release -derivedDataPath "$BUILD" \
+    -configuration Release -derivedDataPath "$BUILD" -skipMacroValidation \
     CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO >/dev/null )
 APP="$BUILD/Build/Products/Release/TinyForge.app"
 

@@ -22,7 +22,8 @@ struct MainShell: View {
         _hub = State(initialValue: HubBrowserModel(api: api, progress: progress))
         _datasets = State(initialValue: DatasetBuilderModel(api: api))
         _training = State(initialValue: TrainingModel(api: api, events: runEvents))
-        _playground = State(initialValue: PlaygroundModel(api: api, infer: inference))
+        _playground = State(initialValue: PlaygroundModel(
+            api: api, infer: inference, nativeInfer: NativeInferenceClient()))
         _export = State(initialValue: ExportModel(api: api))
         _settings = State(initialValue: SettingsModel(api: api))
         self.runtime = runtime

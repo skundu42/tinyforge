@@ -12,6 +12,11 @@ scripts/build_release.sh        # bundle python → build app → embed → sign
 scripts/notarize.sh build/TinyForge.dmg
 ```
 
+> **Prerequisites (one-time):** the app links MLX-Swift, which needs the **Metal
+> Toolchain** (`xcodebuild -downloadComponent MetalToolchain`) to compile its
+> shaders, and the build passes **`-skipMacroValidation`** (already wired into
+> `build_release.sh`) to trust the MLX-Swift macro packages headlessly.
+
 ## Steps
 
 1. **`scripts/bundle_python.sh`** — copies a uv-managed python-build-standalone
