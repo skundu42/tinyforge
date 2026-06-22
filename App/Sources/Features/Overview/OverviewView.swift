@@ -19,6 +19,7 @@ struct OverviewView: View {
             }
             .padding(Theme.Space.xxl)
             .frame(maxWidth: 760, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationTitle("Home")
         .task { await model.load() }

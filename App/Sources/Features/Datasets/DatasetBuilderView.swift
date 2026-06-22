@@ -21,8 +21,9 @@ struct DatasetBuilderView: View {
             }
             .padding(20)
             .frame(maxWidth: 840, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .navigationTitle("Dataset Builder")
+        .navigationTitle("Datasets")
         .task { await model.loadRegistry() }
     }
 

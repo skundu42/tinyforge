@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The primary app shell shown once the backend is healthy.
 struct MainShell: View {
-    @State private var selection: AppSection = .home
+    @State private var selection: AppSection
     @State private var overview: OverviewModel
     @State private var hub: HubBrowserModel
     @State private var datasets: DatasetBuilderModel
@@ -17,6 +17,7 @@ struct MainShell: View {
         runEvents: any RunEventStreaming, inference: any InferenceStreaming,
         runtime: RuntimeInfo?
     ) {
+        _selection = State(initialValue: Self.initialSection())
         _overview = State(initialValue: OverviewModel(api: api))
         _hub = State(initialValue: HubBrowserModel(api: api, progress: progress))
         _datasets = State(initialValue: DatasetBuilderModel(api: api))
@@ -25,6 +26,19 @@ struct MainShell: View {
         _export = State(initialValue: ExportModel(api: api))
         _settings = State(initialValue: SettingsModel(api: api))
         self.runtime = runtime
+    }
+
+    /// DEBUG-only: open on a given section via `open … --args --start-section <name>`,
+    /// used to screenshot each page during visual review.
+    private static func initialSection() -> AppSection {
+        #if DEBUG
+        let args = CommandLine.arguments
+        if let i = args.firstIndex(of: "--start-section"), i + 1 < args.count,
+            let section = AppSection(rawValue: args[i + 1]) {
+            return section
+        }
+        #endif
+        return .home
     }
 
     var body: some View {

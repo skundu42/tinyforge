@@ -10,7 +10,7 @@ struct HubBrowserView: View {
             Divider()
             content
         }
-        .navigationTitle("HuggingFace Hub")
+        .navigationTitle("Models")
     }
 
     private var searchBar: some View {

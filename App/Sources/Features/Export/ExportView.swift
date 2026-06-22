@@ -78,6 +78,7 @@ struct ExportView: View {
             }
             .padding(20)
             .frame(maxWidth: 760, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationTitle("Export")
         .task { await model.loadInputs() }

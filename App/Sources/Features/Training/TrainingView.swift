@@ -16,6 +16,7 @@ struct TrainingView: View {
             }
             .padding(20)
             .frame(maxWidth: 920, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationTitle("Finetune")
         .task { await model.loadInputs() }
