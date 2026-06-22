@@ -1,0 +1,94 @@
+import Foundation
+
+@testable import TinyForge
+
+/// Configurable fake backend for view-model tests.
+final class FakeBackendAPI: BackendAPI, @unchecked Sendable {
+    var models: [HubModel] = []
+    var datasets: [HubDataset] = []
+    var detail: HubModelDetail?
+    var startResult: DownloadProgress?
+    var cache = CacheInfo(sizeOnDisk: 0, repos: [])
+    var auth = AuthStatus(loggedIn: false, name: nil)
+    var searchError: Error?
+    var freedBytes = 0
+
+    private(set) var loggedInToken: String?
+    private(set) var deletedRepo: String?
+
+    func health() async throws -> HealthStatus {
+        HealthStatus(status: "ok", name: "tinyforge", version: "0")
+    }
+
+    func runtime() async throws -> RuntimeInfo {
+        RuntimeInfo(pythonVersion: "3.13", platform: "darwin", machine: "arm64", engines: [:])
+    }
+
+    func searchModels(query: String?, sort: String, limit: Int) async throws -> [HubModel] {
+        if let searchError { throw searchError }
+        return models
+    }
+
+    func searchDatasets(query: String?, sort: String, limit: Int) async throws -> [HubDataset] {
+        if let searchError { throw searchError }
+        return datasets
+    }
+
+    func modelDetail(repoId: String) async throws -> HubModelDetail {
+        guard let detail else { throw APIError.notImplemented }
+        return detail
+    }
+
+    func startDownload(repoId: String, repoType: String) async throws -> DownloadProgress {
+        guard let startResult else { throw APIError.notImplemented }
+        return startResult
+    }
+
+    func downloadProgress(id: String) async throws -> DownloadProgress {
+        guard let startResult else { throw APIError.notImplemented }
+        return startResult
+    }
+
+    func cacheInfo() async throws -> CacheInfo { cache }
+
+    func deleteCached(repoId: String) async throws -> Int {
+        deletedRepo = repoId
+        return freedBytes
+    }
+
+    func authStatus() async throws -> AuthStatus { auth }
+
+    func login(token: String) async throws -> AuthStatus {
+        loggedInToken = token
+        auth = AuthStatus(loggedIn: true, name: "alice")
+        return auth
+    }
+
+    func logout() async throws {
+        auth = AuthStatus(loggedIn: false, name: nil)
+    }
+}
+
+/// Yields a fixed sequence of progress updates.
+struct FakeProgressStreaming: ProgressStreaming {
+    let updates: [DownloadProgress]
+
+    func stream(jobId: String) -> AsyncStream<DownloadProgress> {
+        AsyncStream { continuation in
+            for update in updates {
+                continuation.yield(update)
+            }
+            continuation.finish()
+        }
+    }
+}
+
+func progress(
+    repoId: String, fraction: Double, state: String, downloaded: Int = 0, total: Int = 100
+) -> DownloadProgress {
+    DownloadProgress(
+        id: "job1", repoId: repoId, repoType: "model", totalBytes: total,
+        downloadedBytes: downloaded, fraction: fraction, state: state, error: nil,
+        localPath: state == "completed" ? "/cache/\(repoId)" : nil
+    )
+}

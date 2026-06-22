@@ -16,10 +16,11 @@ final class BackendController {
 
     private(set) var phase: Phase = .idle
     private(set) var runtime: RuntimeInfo?
+    private(set) var api: APIClient?
+    private(set) var progressClient: DownloadProgressClient?
 
     private let manager = BackendProcessManager()
     private let token = TokenGenerator.make()
-    private var client: APIClient?
 
     func launchIfNeeded() async {
         guard case .idle = phase else { return }
@@ -39,7 +40,8 @@ final class BackendController {
             let port = try await manager.start(spec)
             let base = URL(string: "http://127.0.0.1:\(port)")!
             let client = APIClient(baseURL: base, token: token)
-            self.client = client
+            self.api = client
+            self.progressClient = DownloadProgressClient(baseURL: base, token: token)
             let health = try await client.health()
             runtime = try? await client.runtime()
             phase = .healthy(health)

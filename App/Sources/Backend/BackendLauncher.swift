@@ -79,13 +79,15 @@ enum BackendLauncher {
     #endif
 }
 
-/// Generates the per-launch bearer token shared with the backend.
+/// Generates the per-launch bearer token shared with the backend. Hex-encoded
+/// so it is safe both in the REST Authorization header and in the WebSocket
+/// query string (base64's `+`/`/` would be mangled as a query value).
 enum TokenGenerator {
     static func make() -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
         for index in bytes.indices {
             bytes[index] = UInt8.random(in: UInt8.min...UInt8.max)
         }
-        return Data(bytes).base64EncodedString()
+        return bytes.map { String(format: "%02x", $0) }.joined()
     }
 }

@@ -31,6 +31,13 @@ struct BackendLauncherTests {
         #expect(spec?.arguments == ["-m", "tinyforge", "--port", "0"])
     }
 
+    @Test func tokenIsUrlSafeHex() {
+        // Must be safe in a WebSocket query string; base64's +,/,= would break it.
+        let token = TokenGenerator.make()
+        #expect(token.count == 64)
+        #expect(token.allSatisfy { $0.isHexDigit })
+    }
+
     @Test func debugRepoSpecReturnsNilWhenVenvMissing() {
         let fakeFile = "/work/macos-ml/App/Sources/Backend/BackendLauncher.swift"
         let spec = BackendLauncher.debugRepoSpec(

@@ -6,8 +6,8 @@ finetuning product; M6 adds breadth; M7 is packaging/polish.
 | Milestone | Scope | Status |
 |-----------|-------|--------|
 | **M0** | Foundations / walking skeleton: SwiftUI app ⇄ embedded Python FastAPI sidecar, process lifecycle, health/runtime | ✅ done |
-| M1 | HuggingFace Hub browse/download + cache + token auth | ⬜ next |
-| M2 | Dataset builder (import, format, tokenize preview, splits) | ⬜ |
+| **M1** | HuggingFace Hub browse/download + cache + token auth | ✅ done |
+| M2 | Dataset builder (import, format, tokenize preview, splits) | ⬜ next |
 | M3 | LLM LoRA finetuning (MLX) + live dashboards + experiment tracking | ⬜ |
 | M4 | Inference playground (base vs finetuned, streaming) | ⬜ |
 | M5 | Exports (safetensors/LoRA, GGUF, Core ML, MLX) + push to Hub | ⬜ |
@@ -36,6 +36,26 @@ all logs go to stderr.
 - 11 Swift Testing tests incl. an end-to-end test that spawns the real backend.
 
 **Verified:** clean app quit and force-kill (SIGKILL) both reap the backend (no orphans); full handshake (spawn → ready → `/health` → `/v1/runtime`) green.
+
+## M1 — delivered
+
+Full HuggingFace Hub integration, native end-to-end.
+
+- **Backend** (`tinyforge/hub/`, `services.py`, `api/routers/hub.py`): token auth
+  (HF_TOKEN-priority, login/whoami/logout), model/dataset search + detail, a
+  threaded download manager with real byte progress (per-file `hf_hub_download`
+  byte bars — `snapshot_download`/Xet don't surface incremental bytes), cache
+  scan/delete, REST routes + a token-guarded WebSocket progress stream.
+- **App** (`Features/Hub`, `Features/Settings`): `APIClient` hub methods over the
+  typed `BackendAPI`, a WebSocket `DownloadProgressClient`, a `NavigationSplitView`
+  shell, a Hub browser (search · sort · results · detail · download with live
+  progress), and a Settings panel (HF token sign-in · cache management).
+- **Verified e2e** (opt-in network test): real Swift client → live backend →
+  Hub search + download with WebSocket progress to completion. Caught + fixed a
+  WebSocket token bug (base64 `+` mangled in the query string → switched to a
+  URL-safe hex token).
+
+Backend: 45 pytest tests. App: 25 Swift Testing tests.
 
 ## Conventions
 - TDD: tests first (see `backend/tests/`, `App/Tests/`).

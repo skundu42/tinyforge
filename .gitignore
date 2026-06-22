@@ -33,3 +33,6 @@ dist/
 # Local app data / secrets
 *.local
 .env
+
+# Opt-in marker for network integration tests
+.run-network-tests
