@@ -12,7 +12,7 @@ class RunConfig(BaseModel):
     model_repo: str
     data_dir: str  # dir with train.jsonl / valid.jsonl (a prepared dataset)
     adapter_path: str  # output dir for adapters + events.jsonl
-    engine: Literal["mlx", "torch"] = "mlx"
+    engine: Literal["mlx", "torch", "vision"] = "mlx"
     fine_tune_type: Literal["lora", "dora", "full"] = "lora"
     num_layers: int = 16
     batch_size: int = 1

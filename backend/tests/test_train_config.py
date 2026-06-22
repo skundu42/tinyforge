@@ -47,3 +47,12 @@ def test_build_command_torch_engine_uses_torch_worker() -> None:
     assert "--batch-size 32" in joined
     # torch from-scratch path doesn't reference an LLM model/dataset
     assert "mlx_lm" not in joined
+
+
+def test_build_command_vision_engine_uses_vision_worker() -> None:
+    cmd = build_command(base_config(engine="vision", iters=30, batch_size=16), "py")
+    assert cmd[:3] == ["py", "-m", "tinyforge.train.vision_worker"]
+    joined = " ".join(cmd)
+    assert "--iters 30" in joined
+    assert "--batch-size 16" in joined
+    assert "--hidden" not in joined  # vision worker takes no MLP hidden size

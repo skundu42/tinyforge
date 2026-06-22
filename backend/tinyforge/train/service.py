@@ -43,9 +43,10 @@ class TrainingService:
 
     def start(self, request: StartRunRequest) -> RunRecord:
         run_id = self._id_factory()
-        # The from-scratch torch engine needs no LLM model/dataset.
+        # Only the MLX LLM engine needs a model/dataset; torch & vision are self-contained.
         data_dir = self._resolve_dataset(request.dataset_id) if request.engine == "mlx" else "(none)"
-        model_repo = request.model_repo or ("(from-scratch MLP)" if request.engine == "torch" else "")
+        default_names = {"torch": "(from-scratch MLP)", "vision": "(ViT image classifier)"}
+        model_repo = request.model_repo or default_names.get(request.engine, "")
         adapter_path = str(self._runs_dir / run_id)
         config = RunConfig(
             name=request.name, model_repo=model_repo, data_dir=data_dir,

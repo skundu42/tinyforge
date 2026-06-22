@@ -6,18 +6,27 @@ from tinyforge.train.models import RunConfig
 
 
 def build_command(config: RunConfig, python_exe: str) -> list[str]:
-    if config.engine == "torch":
-        return [
-            python_exe, "-m", "tinyforge.train.torch_worker",
+    if config.engine in ("torch", "vision"):
+        module = (
+            "tinyforge.train.vision_worker"
+            if config.engine == "vision"
+            else "tinyforge.train.torch_worker"
+        )
+        command = [
+            python_exe, "-m", module,
             "--adapter-path", config.adapter_path,
             "--iters", str(config.iters),
             "--learning-rate", str(config.learning_rate),
             "--batch-size", str(config.batch_size),
-            "--hidden", str(config.num_layers * 8),
             "--steps-per-report", str(config.steps_per_report),
-            "--steps-per-eval", str(config.steps_per_eval),
             "--seed", str(config.seed),
         ]
+        if config.engine == "torch":
+            command += [
+                "--hidden", str(config.num_layers * 8),
+                "--steps-per-eval", str(config.steps_per_eval),
+            ]
+        return command
 
     command = [
         python_exe, "-m", "mlx_lm", "lora", "--train",

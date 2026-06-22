@@ -29,7 +29,8 @@ struct TrainingView: View {
 
                 Picker("Engine", selection: $model.engine) {
                     Text("LLM LoRA (MLX)").tag("mlx")
-                    Text("From-scratch (PyTorch/MPS)").tag("torch")
+                    Text("From-scratch").tag("torch")
+                    Text("Vision (HF)").tag("vision")
                 }
                 .pickerStyle(.segmented)
 
@@ -58,6 +59,8 @@ struct TrainingView: View {
                         Text("Full").tag("full")
                     }
                     .pickerStyle(.segmented)
+                } else if model.engine == "vision" {
+                    hint("Finetunes a small ViT image classifier on the MPS GPU with HuggingFace Trainer (synthetic image task).")
                 } else {
                     hint("Trains a small MLP on a synthetic task on the MPS GPU — a from-scratch demo of the PyTorch engine.")
                 }
