@@ -37,20 +37,23 @@ struct HubBrowserView: View {
     private var content: some View {
         switch model.phase {
         case .idle:
-            ContentUnavailableView(
-                "Search the Hub", systemImage: "square.stack.3d.up",
-                description: Text("Find models to download and finetune on your Mac."))
+            EmptyState(
+                systemImage: "square.stack.3d.up",
+                title: "Find a model to start",
+                message: "Search HuggingFace for a small model — try “SmolLM”, “Llama 3.2”, or “Qwen”. Models from the mlx-community account are ready to finetune.")
         case .searching:
             ProgressView("Searching…").frame(maxWidth: .infinity, maxHeight: .infinity)
         case .failed(let message):
-            ContentUnavailableView {
-                Label("Search failed", systemImage: "exclamationmark.triangle")
-            } description: {
-                Text(message).textSelection(.enabled)
-            }
+            EmptyState(
+                systemImage: "exclamationmark.triangle",
+                title: "Search didn't work",
+                message: message)
         case .results(let models):
             if models.isEmpty {
-                ContentUnavailableView("No results", systemImage: "magnifyingglass")
+                EmptyState(
+                    systemImage: "magnifyingglass",
+                    title: "No models found",
+                    message: "Try a different search, or browse the mlx-community account.")
             } else {
                 HStack(spacing: 0) {
                     List(models, selection: $selectedId) { item in
@@ -77,7 +80,10 @@ struct HubBrowserView: View {
                 Task { await model.download(detail.id) }
             }
         } else {
-            ContentUnavailableView("Select a model", systemImage: "doc.text.magnifyingglass")
+            EmptyState(
+                systemImage: "doc.text.magnifyingglass",
+                title: "Pick a model",
+                message: "Select a result on the left to see its files and download it.")
         }
     }
 }

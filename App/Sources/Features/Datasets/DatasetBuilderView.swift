@@ -27,7 +27,7 @@ struct DatasetBuilderView: View {
     }
 
     private var sourceSection: some View {
-        GroupBox("Source") {
+        Panel(title: "Source", subtitle: "Where your data comes from", systemImage: "tray.and.arrow.down.fill") {
             VStack(alignment: .leading, spacing: 10) {
                 Picker("Source", selection: $model.sourceKind) {
                     Text("HuggingFace Hub").tag("hub")
@@ -52,12 +52,11 @@ struct DatasetBuilderView: View {
                     .buttonStyle(.borderedProminent)
                 }
             }
-            .padding(6)
         }
     }
 
     private var previewSection: some View {
-        GroupBox("Preview · \(model.preview?.numRows ?? 0) rows") {
+        Panel(title: "Preview", subtitle: "\(model.preview?.numRows ?? 0) rows", systemImage: "eye.fill") {
             ScrollView(.horizontal) {
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                     GridRow {
@@ -81,7 +80,7 @@ struct DatasetBuilderView: View {
     }
 
     private var formatSection: some View {
-        GroupBox("Format → mlx-lm") {
+        Panel(title: "Format", subtitle: "Map columns to a training format", systemImage: "arrow.triangle.branch") {
             VStack(alignment: .leading, spacing: 8) {
                 Picker("Target", selection: $model.spec.mode) {
                     Text("Text").tag("text")
@@ -104,7 +103,6 @@ struct DatasetBuilderView: View {
                 default: EmptyView()
                 }
             }
-            .padding(6)
         }
     }
 
@@ -115,7 +113,7 @@ struct DatasetBuilderView: View {
     }
 
     private var analysisSection: some View {
-        GroupBox("Token length (optional)") {
+        Panel(title: "Token length", subtitle: "Optional — check how big your examples are", systemImage: "ruler.fill") {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     TextField("Tokenizer repo — usually the base model", text: $model.tokenizerRepo)
@@ -140,7 +138,6 @@ struct DatasetBuilderView: View {
                     .frame(height: 120)
                 }
             }
-            .padding(6)
         }
     }
 
@@ -149,7 +146,7 @@ struct DatasetBuilderView: View {
     }
 
     private var prepareSection: some View {
-        GroupBox("Prepare") {
+        Panel(title: "Prepare", subtitle: "Split and save your dataset", systemImage: "checkmark.seal.fill") {
             VStack(alignment: .leading, spacing: 10) {
                 TextField("Dataset name", text: $model.datasetName).textFieldStyle(.roundedBorder)
                 HStack {
@@ -168,12 +165,11 @@ struct DatasetBuilderView: View {
                     }
                 }
             }
-            .padding(6)
         }
     }
 
     private var registrySection: some View {
-        GroupBox("Prepared datasets") {
+        Panel(title: "Prepared datasets", systemImage: "tray.full.fill") {
             VStack(alignment: .leading, spacing: 6) {
                 if model.registered.isEmpty {
                     Text("None yet — prepare one above.").font(.callout).foregroundStyle(.secondary)
@@ -196,7 +192,6 @@ struct DatasetBuilderView: View {
                     }
                 }
             }
-            .padding(6)
         }
     }
 }

@@ -6,7 +6,7 @@ struct ExportView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                GroupBox("Export a finetune") {
+                Panel(title: "Export a finetune", subtitle: "Turn a run into a standalone model", systemImage: "shippingbox.fill") {
                     VStack(alignment: .leading, spacing: 10) {
                         if model.runs.isEmpty {
                             Text("Complete a finetune in the Finetune tab first.")
@@ -49,10 +49,9 @@ struct ExportView: View {
                             }
                         }
                     }
-                    .padding(6)
                 }
 
-                GroupBox("Exports") {
+                Panel(title: "Exports", systemImage: "clock.arrow.circlepath") {
                     VStack(alignment: .leading, spacing: 6) {
                         if model.exports.isEmpty {
                             Text("No exports yet.").font(.callout).foregroundStyle(.secondary)
@@ -75,7 +74,6 @@ struct ExportView: View {
                             }
                         }
                     }
-                    .padding(6)
                 }
             }
             .padding(20)

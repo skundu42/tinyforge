@@ -22,7 +22,7 @@ struct TrainingView: View {
     }
 
     private var configSection: some View {
-        GroupBox("New finetune") {
+        Panel(title: "New finetune", subtitle: "Configure and start a run", systemImage: "bolt.fill") {
             VStack(alignment: .leading, spacing: 10) {
                 TextField("Run name", text: $model.name).textFieldStyle(.roundedBorder)
 
@@ -92,7 +92,6 @@ struct TrainingView: View {
                     }
                 }
             }
-            .padding(6)
         }
     }
 
@@ -120,7 +119,7 @@ struct TrainingView: View {
 
     private var dashboards: some View {
         VStack(spacing: 14) {
-            GroupBox("Loss") {
+            Panel(title: "Loss", subtitle: "Lower is better — train vs. validation", systemImage: "chart.line.downtrend.xyaxis") {
                 Chart {
                     ForEach(model.trainLoss) { point in
                         LineMark(x: .value("Iter", point.iter), y: .value("Train", point.value))
@@ -134,14 +133,14 @@ struct TrainingView: View {
                 .frame(height: 200)
             }
             HStack(spacing: 14) {
-                GroupBox("Throughput (tokens/sec)") {
+                Panel(title: "Throughput", subtitle: "tokens / sec", systemImage: "speedometer") {
                     Chart(model.throughput) { point in
                         LineMark(x: .value("Iter", point.iter), y: .value("tok/s", point.value))
                             .foregroundStyle(.orange)
                     }
                     .frame(height: 150)
                 }
-                GroupBox("Peak memory (GB)") {
+                Panel(title: "Peak memory", subtitle: "GB", systemImage: "memorychip.fill") {
                     Chart(model.peakMem) { point in
                         AreaMark(x: .value("Iter", point.iter), y: .value("GB", point.value))
                             .foregroundStyle(.purple.opacity(0.5))
@@ -153,7 +152,7 @@ struct TrainingView: View {
     }
 
     private var runHistory: some View {
-        GroupBox("Run history") {
+        Panel(title: "Run history", systemImage: "clock.arrow.circlepath") {
             VStack(alignment: .leading, spacing: 6) {
                 if model.runs.isEmpty {
                     hint("No runs yet.")
@@ -171,7 +170,6 @@ struct TrainingView: View {
                     }
                 }
             }
-            .padding(6)
         }
     }
 

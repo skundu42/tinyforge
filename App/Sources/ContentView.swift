@@ -16,45 +16,59 @@ struct ContentView: View {
             }
         case .idle, .launching, .unavailable:
             BackendStatusView()
-                .frame(minWidth: 460, minHeight: 360)
+                .frame(minWidth: 560, minHeight: 460)
         }
     }
 }
 
-/// Shown while the backend is starting or unavailable.
+/// Shown while the backend is starting or unavailable — branded and centered.
 struct BackendStatusView: View {
     @Environment(BackendController.self) private var backend
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack(spacing: 12) {
-                Image(systemName: "cpu.fill").font(.system(size: 28)).foregroundStyle(.tint)
-                VStack(alignment: .leading) {
-                    Text("TinyForge").font(.largeTitle.bold())
-                    Text("Train, finetune & experiment with tiny ML models")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                }
+        VStack(spacing: Theme.Space.xl) {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Theme.brandGradient)
+                .frame(width: 88, height: 88)
+                .overlay(
+                    Image(systemName: "sparkle")
+                        .font(.system(size: 40, weight: .bold))
+                        .foregroundStyle(Theme.sparkGradient))
+                .shadow(color: Theme.accent.opacity(0.4), radius: 16, y: 6)
+
+            VStack(spacing: Theme.Space.s) {
+                Text("TinyForge").font(Theme.rounded(28, .bold))
+                Text("Train, finetune & experiment with tiny ML models")
+                    .font(.callout).foregroundStyle(.secondary)
             }
-            Divider()
-            switch backend.phase {
-            case .idle:
-                Label("Idle", systemImage: "circle").foregroundStyle(.secondary)
-            case .launching:
-                HStack(spacing: 10) {
-                    ProgressView().controlSize(.small)
-                    Text("Starting backend…")
-                }
-            case .unavailable(let message):
-                VStack(alignment: .leading, spacing: 6) {
-                    Label("Backend unavailable", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange).font(.headline)
-                    Text(message).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
-                }
-            case .healthy:
-                Label("Backend healthy", systemImage: "checkmark.seal.fill").foregroundStyle(.green)
-            }
-            Spacer()
+
+            statusLine
         }
-        .padding(28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(Theme.Space.xxl)
+    }
+
+    @ViewBuilder
+    private var statusLine: some View {
+        switch backend.phase {
+        case .idle:
+            Label("Getting ready…", systemImage: "circle.dotted").foregroundStyle(.secondary)
+        case .launching:
+            HStack(spacing: Theme.Space.s) {
+                ProgressView().controlSize(.small)
+                Text("Starting the local engine…").foregroundStyle(.secondary)
+            }
+        case .unavailable(let message):
+            VStack(spacing: Theme.Space.s) {
+                Label("Couldn't start the engine", systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Theme.ember).font(.headline)
+                Text(message)
+                    .font(.caption).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center).frame(maxWidth: 420).textSelection(.enabled)
+            }
+            .card()
+        case .healthy:
+            Label("Ready", systemImage: "checkmark.seal.fill").foregroundStyle(Theme.success)
+        }
     }
 }
