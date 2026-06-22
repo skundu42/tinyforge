@@ -98,6 +98,56 @@ final class FakeBackendAPI: BackendAPI, @unchecked Sendable {
         deletedDataset = id
         registered.removeAll { $0.id == id }
     }
+
+    // Training
+    var runs: [RunRecord] = []
+    var startResultRun: RunRecord?
+    private(set) var startedRequest: StartRunRequest?
+    private(set) var stoppedRun: String?
+
+    func startRun(_ request: StartRunRequest) async throws -> RunRecord {
+        startedRequest = request
+        let record = startResultRun ?? RunRecord(
+            id: "run1", name: request.name, modelRepo: request.modelRepo,
+            datasetId: request.datasetId, state: "running", createdAt: "t",
+            adapterPath: "/runs/run1")
+        runs.append(record)
+        return record
+    }
+
+    func listRuns() async throws -> [RunRecord] { runs }
+
+    func runStatus(id: String) async throws -> RunStatus {
+        RunStatus(id: id, name: "t", state: "running", error: nil, numEvents: 0)
+    }
+
+    func stopRun(id: String) async throws {
+        stoppedRun = id
+    }
+}
+
+struct FakeRunEventStreaming: RunEventStreaming {
+    let events: [TrainEvent]
+
+    func stream(runId: String) -> AsyncStream<TrainEvent> {
+        AsyncStream { continuation in
+            for event in events {
+                continuation.yield(event)
+            }
+            continuation.finish()
+        }
+    }
+}
+
+func trainEvent(
+    _ type: String, iter: Int? = nil, trainLoss: Double? = nil, valLoss: Double? = nil,
+    tokensPerSec: Double? = nil, peakMemGb: Double? = nil, lr: Double? = nil,
+    state: String? = nil, path: String? = nil
+) -> TrainEvent {
+    TrainEvent(
+        event: type, iter: iter, trainLoss: trainLoss, valLoss: valLoss, lr: lr,
+        tokensPerSec: tokensPerSec, itPerSec: nil, peakMemGb: peakMemGb, trainedTokens: nil,
+        state: state, error: nil, path: path, text: nil)
 }
 
 /// Yields a fixed sequence of progress updates.

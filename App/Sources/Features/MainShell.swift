@@ -5,12 +5,14 @@ struct MainShell: View {
     enum Section: String, CaseIterable, Identifiable {
         case hub = "Hub"
         case datasets = "Datasets"
+        case train = "Finetune"
         case settings = "Settings"
         var id: String { rawValue }
         var icon: String {
             switch self {
             case .hub: "square.stack.3d.up.fill"
             case .datasets: "tablecells.fill"
+            case .train: "bolt.fill"
             case .settings: "gearshape.fill"
             }
         }
@@ -19,12 +21,17 @@ struct MainShell: View {
     @State private var selection: Section = .hub
     @State private var hub: HubBrowserModel
     @State private var datasets: DatasetBuilderModel
+    @State private var training: TrainingModel
     @State private var settings: SettingsModel
     private let runtime: RuntimeInfo?
 
-    init(api: any BackendAPI, progress: any ProgressStreaming, runtime: RuntimeInfo?) {
+    init(
+        api: any BackendAPI, progress: any ProgressStreaming,
+        runEvents: any RunEventStreaming, runtime: RuntimeInfo?
+    ) {
         _hub = State(initialValue: HubBrowserModel(api: api, progress: progress))
         _datasets = State(initialValue: DatasetBuilderModel(api: api))
+        _training = State(initialValue: TrainingModel(api: api, events: runEvents))
         _settings = State(initialValue: SettingsModel(api: api))
         self.runtime = runtime
     }
@@ -40,6 +47,7 @@ struct MainShell: View {
             switch selection {
             case .hub: HubBrowserView(model: hub)
             case .datasets: DatasetBuilderView(model: datasets)
+            case .train: TrainingView(model: training)
             case .settings: SettingsView(model: settings)
             }
         }

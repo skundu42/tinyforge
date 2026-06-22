@@ -6,8 +6,9 @@ struct ContentView: View {
     var body: some View {
         switch backend.phase {
         case .healthy:
-            if let api = backend.api, let progress = backend.progressClient {
-                MainShell(api: api, progress: progress, runtime: backend.runtime)
+            if let api = backend.api, let progress = backend.progressClient,
+                let runEvents = backend.runEventClient {
+                MainShell(api: api, progress: progress, runEvents: runEvents, runtime: backend.runtime)
             } else {
                 BackendStatusView()
             }

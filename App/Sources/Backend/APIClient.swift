@@ -93,6 +93,24 @@ actor APIClient: BackendAPI {
         let _: OkResponse = try await request("DELETE", "v1/datasets/\(id)")
     }
 
+    // MARK: Training runs
+
+    func startRun(_ request: StartRunRequest) async throws -> RunRecord {
+        try await self.request("POST", "v1/runs", bodyData: try encoder.encode(request))
+    }
+
+    func listRuns() async throws -> [RunRecord] {
+        try await request("GET", "v1/runs")
+    }
+
+    func runStatus(id: String) async throws -> RunStatus {
+        try await request("GET", "v1/runs/\(id)/status")
+    }
+
+    func stopRun(id: String) async throws {
+        let _: OkResponse = try await request("POST", "v1/runs/\(id)/stop")
+    }
+
     // MARK: Transport
 
     private func searchQuery(_ query: String?, _ sort: String, _ limit: Int) -> [URLQueryItem] {

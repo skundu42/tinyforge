@@ -145,4 +145,8 @@ protocol BackendAPI: Sendable {
     func prepareDataset(name: String, source: DatasetSource, spec: FormatSpec, valFraction: Double, seed: Int, maxRows: Int?) async throws -> RegisteredDataset
     func listDatasets() async throws -> [RegisteredDataset]
     func deleteDataset(id: String) async throws
+    func startRun(_ request: StartRunRequest) async throws -> RunRecord
+    func listRuns() async throws -> [RunRecord]
+    func runStatus(id: String) async throws -> RunStatus
+    func stopRun(id: String) async throws
 }
