@@ -50,7 +50,8 @@ class FakeTraining:
 def client_and_training():
     training = FakeTraining()
     services = Services(
-        auth=None, hub=None, downloads=None, cache=None, datasets=None, training=training
+        auth=None, hub=None, downloads=None, cache=None, datasets=None,
+        training=training, inference=None,
     )
     app = create_app(token=TOKEN, services=services)
     app.state.token = TOKEN

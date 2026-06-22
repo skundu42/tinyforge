@@ -43,7 +43,8 @@ class FakeDatasets:
 @pytest.fixture
 def client_and_services():
     services = Services(
-        auth=None, hub=None, downloads=None, cache=None, datasets=FakeDatasets(), training=None
+        auth=None, hub=None, downloads=None, cache=None, datasets=FakeDatasets(),
+        training=None, inference=None,
     )
     return TestClient(create_app(token=TOKEN, services=services)), services
 

@@ -19,10 +19,13 @@ class Services:
     cache: Any
     datasets: Any
     training: Any
+    inference: Any
 
 
 def build_services() -> Services:
     import sys
+
+    from tinyforge.infer.service import InferenceService
 
     from tinyforge.datasets.registry import DatasetRegistry
     from tinyforge.datasets.service import DatasetService
@@ -50,4 +53,5 @@ def build_services() -> Services:
         cache=CacheService(),
         datasets=datasets,
         training=training,
+        inference=InferenceService(),
     )
