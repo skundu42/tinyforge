@@ -33,6 +33,19 @@ if [[ -d "$PYDIR" ]]; then
   done
 fi
 
+# Swift/MLX-Swift embeds dylibs and (potentially) frameworks here; Xcode signs
+# them ad-hoc during the build, so they must be re-signed with the real identity
+# inside-out before the app, or notarization rejects them.
+if [[ -d "$APP/Contents/Frameworks" ]]; then
+  echo "==> signing embedded frameworks & dylibs"
+  find "$APP/Contents/Frameworks" -type f \( -name "*.dylib" -o -name "*.so" \) -print0 | while IFS= read -r -d '' lib; do
+    sign_lib "$lib"
+  done
+  find "$APP/Contents/Frameworks" -type d -name "*.framework" -print0 | while IFS= read -r -d '' fw; do
+    sign_lib "$fw"
+  done
+fi
+
 echo "==> signing the app bundle"
 codesign --force --options runtime "$TIMESTAMP" --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$APP"
 

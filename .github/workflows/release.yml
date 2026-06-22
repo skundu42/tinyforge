@@ -122,6 +122,7 @@ jobs:
           xcrun stapler validate "$DMG"
 
       - name: Upload workflow artifact
+        if: ${{ !cancelled() && env.DMG != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: TinyForge-${{ steps.version.outputs.tag }}-dmg
