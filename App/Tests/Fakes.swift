@@ -11,6 +11,9 @@ final class FakeBackendAPI: BackendAPI, @unchecked Sendable {
     var cache = CacheInfo(sizeOnDisk: 0, repos: [])
     var auth = AuthStatus(loggedIn: false, name: nil)
     var searchError: Error?
+    /// When set, the "load"/refresh methods (and `deleteCached`) throw it — used
+    /// to exercise the error-surfacing paths that previously swallowed failures.
+    var loadFailure: Error?
     var freedBytes = 0
 
     private(set) var loggedInToken: String?
@@ -49,14 +52,21 @@ final class FakeBackendAPI: BackendAPI, @unchecked Sendable {
         return startResult
     }
 
-    func cacheInfo() async throws -> CacheInfo { cache }
+    func cacheInfo() async throws -> CacheInfo {
+        if let loadFailure { throw loadFailure }
+        return cache
+    }
 
     func deleteCached(repoId: String) async throws -> Int {
+        if let loadFailure { throw loadFailure }
         deletedRepo = repoId
         return freedBytes
     }
 
-    func authStatus() async throws -> AuthStatus { auth }
+    func authStatus() async throws -> AuthStatus {
+        if let loadFailure { throw loadFailure }
+        return auth
+    }
 
     func login(token: String) async throws -> AuthStatus {
         loggedInToken = token
@@ -92,7 +102,10 @@ final class FakeBackendAPI: BackendAPI, @unchecked Sendable {
         return record
     }
 
-    func listDatasets() async throws -> [RegisteredDataset] { registered }
+    func listDatasets() async throws -> [RegisteredDataset] {
+        if let loadFailure { throw loadFailure }
+        return registered
+    }
 
     func deleteDataset(id: String) async throws {
         deletedDataset = id
@@ -115,7 +128,10 @@ final class FakeBackendAPI: BackendAPI, @unchecked Sendable {
         return record
     }
 
-    func listRuns() async throws -> [RunRecord] { runs }
+    func listRuns() async throws -> [RunRecord] {
+        if let loadFailure { throw loadFailure }
+        return runs
+    }
 
     func runStatus(id: String) async throws -> RunStatus {
         RunStatus(id: id, name: "t", state: "running", error: nil, numEvents: 0)
@@ -139,7 +155,10 @@ final class FakeBackendAPI: BackendAPI, @unchecked Sendable {
         return status
     }
 
-    func listExports() async throws -> [ExportStatus] { exports }
+    func listExports() async throws -> [ExportStatus] {
+        if let loadFailure { throw loadFailure }
+        return exports
+    }
 
     func getExport(id: String) async throws -> ExportStatus {
         exportResult ?? exports.first { $0.id == id } ?? ExportStatus(

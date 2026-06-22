@@ -1,0 +1,85 @@
+name: CI
+
+# Runs the backend (ruff + pytest) and the macOS app (xcodebuild test) on every
+# push to main and every pull request, so regressions are caught before merge.
+# The release DMG pipeline lives separately in release.yml (tag-triggered).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same branch/PR.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (ruff + pytest)
+    # mlx is Apple-Silicon only, so the backend deps require a macOS arm64 runner.
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Sync dependencies
+        working-directory: backend
+        run: uv sync
+
+      - name: Lint (ruff)
+        working-directory: backend
+        run: uv run ruff check
+
+      - name: Test (pytest)
+        working-directory: backend
+        run: uv run pytest
+
+  app:
+    name: App (xcodebuild test)
+    # Apple Silicon runner with Xcode 26+ (Swift 6.3) — required by MLX / MLX-Swift.
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install build tools (xcodegen, uv)
+        run: brew install xcodegen
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Download Metal Toolchain (MLX-Swift shaders)
+        run: xcodebuild -downloadComponent MetalToolchain
+
+      # The app's integration tests spawn the real backend via the dev venv, so
+      # the backend environment must exist before the test run.
+      - name: Sync backend dependencies
+        working-directory: backend
+        run: uv sync
+
+      - name: Generate Xcode project
+        working-directory: App
+        run: xcodegen generate
+
+      - name: Test
+        working-directory: App
+        run: |
+          xcodebuild test \
+            -scheme TinyForge \
+            -destination 'platform=macOS' \
+            -skipMacroValidation

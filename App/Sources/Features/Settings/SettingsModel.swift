@@ -4,12 +4,13 @@ import Observation
 /// Drives the settings panel: HF token login and local cache management.
 @MainActor
 @Observable
-final class SettingsModel {
+final class SettingsModel: LoadErrorReporting {
     var tokenInput: String = ""
     private(set) var auth: AuthStatus = AuthStatus(loggedIn: false, name: nil)
     private(set) var cache: CacheInfo?
     private(set) var busy = false
     private(set) var message: String?
+    var loadError: String?
 
     private let api: any BackendAPI
 
@@ -23,11 +24,12 @@ final class SettingsModel {
     }
 
     func loadAuth() async {
-        auth = (try? await api.authStatus()) ?? AuthStatus(loggedIn: false, name: nil)
+        auth = await attempt("Load account") { try await api.authStatus() }
+            ?? AuthStatus(loggedIn: false, name: nil)
     }
 
     func loadCache() async {
-        cache = try? await api.cacheInfo()
+        cache = await attempt("Load cache") { try await api.cacheInfo() }
     }
 
     func login() async {
@@ -44,12 +46,12 @@ final class SettingsModel {
     }
 
     func logout() async {
-        try? await api.logout()
+        await attempt("Sign out") { try await api.logout() }
         await loadAuth()
     }
 
     func delete(_ repoId: String) async {
-        let freed = (try? await api.deleteCached(repoId: repoId)) ?? 0
+        let freed = await attempt("Delete \(repoId)") { try await api.deleteCached(repoId: repoId) } ?? 0
         message = "Freed \(ByteFormat.string(freed))"
         await loadCache()
     }

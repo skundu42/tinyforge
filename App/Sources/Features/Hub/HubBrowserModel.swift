@@ -4,7 +4,7 @@ import Observation
 /// Drives the Hub browser: search, model detail, and downloads with live progress.
 @MainActor
 @Observable
-final class HubBrowserModel {
+final class HubBrowserModel: LoadErrorReporting {
     enum Phase: Equatable {
         case idle
         case searching
@@ -19,6 +19,7 @@ final class HubBrowserModel {
     private(set) var detailLoading = false
     private(set) var downloads: [String: DownloadProgress] = [:]
     private(set) var downloadedModels: [CachedRepo] = []
+    var loadError: String?
 
     private let api: any BackendAPI
     private let progress: any ProgressStreaming
@@ -49,16 +50,16 @@ final class HubBrowserModel {
         detailLoading = true
         selectedDetail = nil
         defer { detailLoading = false }
-        selectedDetail = try? await api.modelDetail(repoId: repoId)
+        selectedDetail = await attempt("Load model details") { try await api.modelDetail(repoId: repoId) }
     }
 
     func loadDownloaded() async {
-        let repos = (try? await api.cacheInfo())?.repos ?? []
+        let repos = (await attempt("Load downloads") { try await api.cacheInfo() })?.repos ?? []
         downloadedModels = repos.filter { $0.repoType == "model" }
     }
 
     func deleteDownloaded(_ repoId: String) async {
-        try? await api.deleteCached(repoId: repoId)
+        await attempt("Delete \(repoId)") { try await api.deleteCached(repoId: repoId) }
         await loadDownloaded()
     }
 

@@ -5,7 +5,7 @@ import Observation
 /// optionally push to the Hub, start the export, and poll until it finishes.
 @MainActor
 @Observable
-final class ExportModel {
+final class ExportModel: LoadErrorReporting {
     var runId = ""
     var target = "safetensors"
     var qBits = 4
@@ -15,6 +15,7 @@ final class ExportModel {
     private(set) var exports: [ExportStatus] = []
     private(set) var busy = false
     private(set) var message: String?
+    var loadError: String?
 
     private let api: any BackendAPI
 
@@ -25,12 +26,13 @@ final class ExportModel {
     var canExport: Bool { !runId.isEmpty && !busy }
 
     func loadInputs() async {
-        runs = ((try? await api.listRuns()) ?? []).filter { $0.state == "completed" }
+        runs = (await attempt("Load finetunes") { try await api.listRuns() } ?? [])
+            .filter { $0.state == "completed" }
         await refresh()
     }
 
     func refresh() async {
-        exports = (try? await api.listExports()) ?? []
+        exports = await attempt("Load exports") { try await api.listExports() } ?? []
     }
 
     func start() async {

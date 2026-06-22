@@ -5,7 +5,7 @@ import Observation
 /// enter a prompt, and stream base (and adapter) generations side by side.
 @MainActor
 @Observable
-final class PlaygroundModel {
+final class PlaygroundModel: LoadErrorReporting {
     var modelRepo = ""
     var prompt = "Write a haiku about the ocean."
     var adapterRunId = ""  // "" = base only
@@ -20,6 +20,7 @@ final class PlaygroundModel {
     private(set) var adapterOutput = ""
     private(set) var generating = false
     private(set) var error: String?
+    var loadError: String?
 
     private let api: any BackendAPI
     private let infer: any InferenceStreaming
@@ -41,8 +42,10 @@ final class PlaygroundModel {
     var selectedRun: RunRecord? { runs.first { $0.id == adapterRunId } }
 
     func loadInputs() async {
-        cachedModels = ((try? await api.cacheInfo())?.repos ?? []).filter { $0.repoType == "model" }
-        runs = ((try? await api.listRuns()) ?? []).filter { $0.state == "completed" }
+        let repos = (await attempt("Load models") { try await api.cacheInfo() })?.repos ?? []
+        cachedModels = repos.filter { $0.repoType == "model" }
+        runs = (await attempt("Load finetunes") { try await api.listRuns() } ?? [])
+            .filter { $0.state == "completed" }
     }
 
     func generate() async {

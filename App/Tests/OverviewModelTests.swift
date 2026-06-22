@@ -26,4 +26,17 @@ struct OverviewModelTests {
         #expect(sut.finetuneCount == 1)  // only the completed run
         #expect(sut.count(for: .hub) == 1)
     }
+
+    @Test func loadSurfacesBackendFailureAndDegradesGracefully() async {
+        let api = FakeBackendAPI()
+        api.loadFailure = APIError.notImplemented
+        let sut = OverviewModel(api: api)
+
+        await sut.load()
+
+        #expect(sut.loadError != nil)
+        #expect(sut.modelCount == 0)
+        #expect(sut.datasetCount == 0)
+        #expect(sut.finetuneCount == 0)
+    }
 }

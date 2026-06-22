@@ -5,7 +5,7 @@ import Observation
 /// a run, ingest streamed events into live metric series, stop, and list runs.
 @MainActor
 @Observable
-final class TrainingModel {
+final class TrainingModel: LoadErrorReporting {
     // Config
     var name = ""
     var engine = "mlx"  // mlx (LLM LoRA) | torch (from-scratch MPS)
@@ -21,6 +21,7 @@ final class TrainingModel {
     // Available inputs
     private(set) var datasets: [RegisteredDataset] = []
     private(set) var cachedModels: [CachedRepo] = []
+    var loadError: String?
 
     // Run state
     private(set) var activeRunId: String?
@@ -53,13 +54,14 @@ final class TrainingModel {
     }
 
     func loadInputs() async {
-        datasets = (try? await api.listDatasets()) ?? []
-        cachedModels = ((try? await api.cacheInfo())?.repos ?? []).filter { $0.repoType == "model" }
+        datasets = await attempt("Load datasets") { try await api.listDatasets() } ?? []
+        let repos = (await attempt("Load models") { try await api.cacheInfo() })?.repos ?? []
+        cachedModels = repos.filter { $0.repoType == "model" }
         await loadRuns()
     }
 
     func loadRuns() async {
-        runs = (try? await api.listRuns()) ?? []
+        runs = await attempt("Load runs") { try await api.listRuns() } ?? []
     }
 
     func start() async {
@@ -111,7 +113,7 @@ final class TrainingModel {
 
     func stop() async {
         guard let id = activeRunId else { return }
-        try? await api.stopRun(id: id)
+        await attempt("Stop run") { try await api.stopRun(id: id) }
         runState = "stopped"
     }
 

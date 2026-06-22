@@ -37,4 +37,14 @@ struct SettingsModelTests {
         #expect(sut.auth.name == "bob")
         #expect(sut.cache?.sizeOnDisk == 2048)
     }
+
+    @Test func refreshSurfacesBackendFailure() async {
+        let api = FakeBackendAPI()
+        api.loadFailure = APIError.notImplemented
+        let sut = SettingsModel(api: api)
+
+        await sut.refresh()
+
+        #expect(sut.loadError != nil)
+    }
 }

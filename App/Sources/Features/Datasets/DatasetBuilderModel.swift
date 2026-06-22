@@ -5,7 +5,7 @@ import Observation
 /// prepare → registry.
 @MainActor
 @Observable
-final class DatasetBuilderModel {
+final class DatasetBuilderModel: LoadErrorReporting {
     // Source
     var sourceKind = "hub"  // hub | local
     var repoId = ""
@@ -34,6 +34,8 @@ final class DatasetBuilderModel {
 
     // Registry
     private(set) var registered: [RegisteredDataset] = []
+
+    var loadError: String?
 
     private let api: any BackendAPI
 
@@ -68,8 +70,10 @@ final class DatasetBuilderModel {
         guard !tokenizerRepo.isEmpty else { return }
         analyzing = true
         defer { analyzing = false }
-        tokenStats = try? await api.analyzeDataset(
-            source: source, spec: spec, tokenizerRepo: tokenizerRepo, sample: 200)
+        tokenStats = await attempt("Analyze tokens") {
+            try await api.analyzeDataset(
+                source: source, spec: spec, tokenizerRepo: tokenizerRepo, sample: 200)
+        }
     }
 
     func prepare() async {
@@ -88,11 +92,11 @@ final class DatasetBuilderModel {
     }
 
     func loadRegistry() async {
-        registered = (try? await api.listDatasets()) ?? []
+        registered = await attempt("Load datasets") { try await api.listDatasets() } ?? []
     }
 
     func delete(_ id: String) async {
-        try? await api.deleteDataset(id: id)
+        await attempt("Delete dataset") { try await api.deleteDataset(id: id) }
         await loadRegistry()
     }
 }

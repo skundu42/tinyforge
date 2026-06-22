@@ -50,9 +50,36 @@ struct MainShell: View {
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(nsColor: .underPageBackgroundColor).opacity(0.5))
+                .loadErrorBanner(currentLoadError) { clearCurrentLoadError() }
         }
         .frame(minWidth: 960, minHeight: 640)
         .tint(Theme.accent)
+    }
+
+    /// The `loadError` of the model backing the current section, surfaced by the
+    /// shared banner. Read from the concrete models so observation stays reliable.
+    private var currentLoadError: String? {
+        switch selection {
+        case .home: overview.loadError
+        case .hub: hub.loadError
+        case .datasets: datasets.loadError
+        case .train: training.loadError
+        case .playground: playground.loadError
+        case .export: export.loadError
+        case .settings: settings.loadError
+        }
+    }
+
+    private func clearCurrentLoadError() {
+        switch selection {
+        case .home: overview.loadError = nil
+        case .hub: hub.loadError = nil
+        case .datasets: datasets.loadError = nil
+        case .train: training.loadError = nil
+        case .playground: playground.loadError = nil
+        case .export: export.loadError = nil
+        case .settings: settings.loadError = nil
+        }
     }
 
     private var sidebar: some View {

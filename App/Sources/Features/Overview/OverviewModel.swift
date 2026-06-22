@@ -4,11 +4,12 @@ import Observation
 /// Live counts that let the Home screen meet a beginner where they are.
 @MainActor
 @Observable
-final class OverviewModel {
+final class OverviewModel: LoadErrorReporting {
     private(set) var modelCount = 0
     private(set) var datasetCount = 0
     private(set) var finetuneCount = 0
     private(set) var loaded = false
+    var loadError: String?
 
     private let api: any BackendAPI
 
@@ -17,13 +18,13 @@ final class OverviewModel {
     }
 
     func load() async {
-        let repos: [CachedRepo] = (try? await api.cacheInfo())?.repos ?? []
+        let repos = (await attempt("Load models") { try await api.cacheInfo() })?.repos ?? []
         modelCount = repos.filter { $0.repoType == "model" }.count
 
-        let datasets: [RegisteredDataset] = (try? await api.listDatasets()) ?? []
+        let datasets = await attempt("Load datasets") { try await api.listDatasets() } ?? []
         datasetCount = datasets.count
 
-        let runs: [RunRecord] = (try? await api.listRuns()) ?? []
+        let runs = await attempt("Load finetunes") { try await api.listRuns() } ?? []
         finetuneCount = runs.filter { $0.state == "completed" }.count
 
         loaded = true

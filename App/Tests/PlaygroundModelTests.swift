@@ -53,4 +53,15 @@ struct PlaygroundModelTests {
         #expect(sut.cachedModels.count == 1)
         #expect(sut.runs.map(\.id) == ["r1"])
     }
+
+    @Test func loadInputsSurfacesBackendFailure() async {
+        let (sut, api) = model(events: [])
+        api.loadFailure = APIError.notImplemented
+
+        await sut.loadInputs()
+
+        #expect(sut.loadError != nil)
+        #expect(sut.cachedModels.isEmpty)
+        #expect(sut.runs.isEmpty)
+    }
 }

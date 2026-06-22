@@ -50,4 +50,15 @@ struct ExportModelTests {
         await sut.loadInputs()
         #expect(sut.runs.map(\.id) == ["r1"])
     }
+
+    @Test func loadInputsSurfacesBackendFailure() async {
+        let (sut, api) = model()
+        api.loadFailure = APIError.notImplemented
+
+        await sut.loadInputs()
+
+        #expect(sut.loadError != nil)
+        #expect(sut.runs.isEmpty)
+        #expect(sut.exports.isEmpty)
+    }
 }

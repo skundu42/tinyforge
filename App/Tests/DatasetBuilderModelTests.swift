@@ -52,4 +52,15 @@ struct DatasetBuilderModelTests {
         #expect(api.deletedDataset == "ds1")
         #expect(sut.registered.isEmpty)
     }
+
+    @Test func loadRegistrySurfacesBackendFailure() async {
+        let api = FakeBackendAPI()
+        api.loadFailure = APIError.notImplemented
+        let sut = DatasetBuilderModel(api: api)
+
+        await sut.loadRegistry()
+
+        #expect(sut.loadError != nil)
+        #expect(sut.registered.isEmpty)
+    }
 }

@@ -1,7 +1,6 @@
 """Tests for server bootstrap helpers: token resolution, socket bind, ready line."""
 
 import json
-import socket
 
 from tinyforge import server
 

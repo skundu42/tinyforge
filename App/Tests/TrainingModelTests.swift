@@ -72,4 +72,15 @@ struct TrainingModelTests {
         #expect(sut.datasets.count == 1)
         #expect(sut.cachedModels.map(\.repoId) == ["m/x"])
     }
+
+    @Test func loadInputsSurfacesBackendFailure() async {
+        let (sut, api) = model()
+        api.loadFailure = APIError.notImplemented
+
+        await sut.loadInputs()
+
+        #expect(sut.loadError != nil)
+        #expect(sut.datasets.isEmpty)
+        #expect(sut.cachedModels.isEmpty)
+    }
 }

@@ -12,6 +12,7 @@ A native macOS studio for the whole local ML loop: browse a model, build a datas
 [![Swift](https://img.shields.io/badge/Swift-6.3-F05138?style=flat-square&logo=swift&logoColor=white)](https://swift.org)
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![MLX](https://img.shields.io/badge/MLX-Apple%20Silicon-6E56CF?style=flat-square)](https://github.com/ml-explore/mlx)
+[![CI](https://img.shields.io/github/actions/workflow/status/skundu42/tinyforge/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/skundu42/tinyforge/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-160%20passing-2FB67C?style=flat-square)](#testing)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 

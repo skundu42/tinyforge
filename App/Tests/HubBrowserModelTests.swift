@@ -58,4 +58,15 @@ struct HubBrowserModelTests {
 
         #expect(sut.progress(for: "a/b")?.state == "error")
     }
+
+    @Test func loadDownloadedSurfacesBackendFailure() async {
+        let api = FakeBackendAPI()
+        api.loadFailure = APIError.notImplemented
+        let sut = HubBrowserModel(api: api, progress: FakeProgressStreaming(updates: []))
+
+        await sut.loadDownloaded()
+
+        #expect(sut.loadError != nil)
+        #expect(sut.downloadedModels.isEmpty)
+    }
 }

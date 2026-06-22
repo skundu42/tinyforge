@@ -1,7 +1,35 @@
-# CI/CD — release DMG on tag
+# CI/CD
 
-`.github/workflows/release.yml` builds the macOS `.dmg` and attaches it to a
-GitHub Release whenever a version tag is pushed.
+Two workflows:
+
+- **`.github/workflows/ci.yml`** — runs the test suites on every push to `main`
+  and every pull request (see [below](#continuous-integration-tests)).
+- **`.github/workflows/release.yml`** — builds the macOS `.dmg` and attaches it
+  to a GitHub Release whenever a version tag is pushed (see
+  [Trigger a release](#trigger-a-release)).
+
+## Continuous integration (tests)
+
+`ci.yml` gates merges by running, on an Apple-Silicon `macos-15` runner:
+
+| Job | Steps |
+|-----|-------|
+| **Backend** | `uv sync` → `ruff check` (lint) → `pytest` |
+| **App** | install xcodegen + uv, download the Metal Toolchain, `uv sync` the backend (the integration tests spawn the real dev backend), `xcodegen generate`, then `xcodebuild test -skipMacroValidation` |
+
+Both jobs run on macOS because MLX is Apple-Silicon only. Network/heavy
+end-to-end tests stay opt-in (they need a `.run-network-tests` marker, which CI
+doesn't create), so CI runs the hermetic suites. Runs are cancelled when a newer
+commit is pushed to the same branch/PR.
+
+Lint uses ruff's default ruleset (pyflakes + a focused pycodestyle subset),
+configured in `backend/pyproject.toml`. Run it locally with
+`cd backend && uv run ruff check`.
+
+## Release DMG on tag
+
+`release.yml` builds the macOS `.dmg` and attaches it to a GitHub Release
+whenever a version tag is pushed.
 
 ## Trigger a release
 
