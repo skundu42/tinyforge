@@ -8,8 +8,8 @@ finetuning product; M6 adds breadth; M7 is packaging/polish.
 | **M0** | Foundations / walking skeleton: SwiftUI app ⇄ embedded Python FastAPI sidecar, process lifecycle, health/runtime | ✅ done |
 | **M1** | HuggingFace Hub browse/download + cache + token auth | ✅ done |
 | **M2** | Dataset builder (import, format, tokenize preview, splits) | ✅ done |
-| M3 | LLM LoRA finetuning (MLX) + live dashboards + experiment tracking | ⬜ next |
-| M4 | Inference playground (base vs finetuned, streaming) | ⬜ |
+| **M3** | LLM LoRA finetuning (MLX) + live dashboards + experiment tracking | ✅ done |
+| M4 | Inference playground (base vs finetuned, streaming) | ⬜ next |
 | M5 | Exports (safetensors/LoRA, GGUF, Core ML, MLX) + push to Hub | ⬜ |
 | M6 | PyTorch/MPS engine: vision, audio, from-scratch, TRL methods | ⬜ |
 | M7 | Production hardening: notarized DMG, native MLX-Swift inference, auto-update | ⬜ |
@@ -76,6 +76,27 @@ A dataset builder that turns raw data into mlx-lm-ready splits.
   preview + Alpaca prepare → registered `train.jsonl` in `completion` format.
 
 Backend: 71 pytest tests. App: 30 Swift Testing tests.
+
+## M3 — delivered
+
+MLX LoRA/QLoRA finetuning with live dashboards and experiment tracking.
+
+- **Backend** (`tinyforge/train/`): `mlx_lm.lora` run as an isolated subprocess;
+  output parsed into structured train/val/saved events mirrored to
+  `events.jsonl`; `RunConfig`/`build_command`; `TrainingRunner` (start/stop/
+  status/events); SQLite `RunRegistry`; `TrainingService` resolves a dataset id
+  to its prepared dir, assigns an output dir, persists records, syncs live
+  state; `/v1/runs` routes + a token-guarded WebSocket event stream.
+  Installed mlx 0.31.2 / mlx-lm 0.31.3 / transformers 5.12.1.
+- **App** (`Features/Training`, `Telemetry`): pick a cached model + prepared
+  dataset + hyperparameters, start a run, watch live Swift Charts dashboards
+  (train/val loss, throughput, peak memory) with GPU-budget + thermal
+  telemetry, stop, and browse run history. `RunEventClient` streams events.
+- **Verified e2e**: real client → backend → `mlx_lm.lora` → WebSocket; a 3-iter
+  LoRA finetune on the cached SmolLM streams metrics to `completed` and saves
+  an adapter (≈2s).
+
+Backend: 96 pytest tests. App: 35 Swift Testing tests.
 
 ## Conventions
 - TDD: tests first (see `backend/tests/`, `App/Tests/`).
