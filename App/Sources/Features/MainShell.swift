@@ -55,7 +55,6 @@ struct MainShell: View {
             Spacer()
 
             SidebarRow(section: .settings, isSelected: selection == .settings) { selection = .settings }
-            BackendBadge(runtime: runtime)
         }
         .padding(Theme.Space.s)
     }
@@ -83,7 +82,7 @@ struct MainShell: View {
         case .train: TrainingView(model: training)
         case .playground: PlaygroundView(model: playground)
         case .export: ExportView(model: export)
-        case .settings: SettingsView(model: settings)
+        case .settings: SettingsView(model: settings, runtime: runtime)
         }
     }
 }
@@ -131,23 +130,3 @@ private struct SidebarRow: View {
     }
 }
 
-private struct BackendBadge: View {
-    let runtime: RuntimeInfo?
-
-    var body: some View {
-        HStack(spacing: Theme.Space.s) {
-            Circle().fill(Theme.success).frame(width: 7, height: 7)
-                .shadow(color: Theme.success.opacity(0.6), radius: 3)
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Backend ready").font(.system(size: 11, weight: .medium))
-                if let runtime {
-                    Text("Python \(runtime.pythonVersion) · \(runtime.machine)")
-                        .font(.system(size: 9)).foregroundStyle(.secondary)
-                }
-            }
-            Spacer()
-        }
-        .padding(.horizontal, Theme.Space.m).padding(.vertical, Theme.Space.s)
-        .background(Theme.success.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-    }
-}

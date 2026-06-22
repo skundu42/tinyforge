@@ -2,10 +2,15 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable var model: SettingsModel
+    var runtime: RuntimeInfo?
 
     var body: some View {
         Form {
             Section("HuggingFace Account") { authSection }
+            Section("Backend") { backendSection }
+            if let runtime, !runtime.engines.isEmpty {
+                Section("Engines") { enginesSection(runtime) }
+            }
             Section {
                 cacheSection
             } header: {
@@ -77,6 +82,40 @@ struct SettingsView: View {
         } else {
             Text("No models cached yet. Download one from the Hub.")
                 .font(.callout).foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var backendSection: some View {
+        LabeledContent("Status") {
+            Label("Running", systemImage: "checkmark.circle.fill").foregroundStyle(Theme.success)
+        }
+        if let runtime {
+            LabeledContent("Python", value: runtime.pythonVersion)
+            LabeledContent("Platform", value: "\(runtime.platform) · \(runtime.machine)")
+        }
+    }
+
+    @ViewBuilder
+    private func enginesSection(_ runtime: RuntimeInfo) -> some View {
+        ForEach(runtime.engines.sorted(by: { $0.key < $1.key }), id: \.key) { name, available in
+            LabeledContent(engineLabel(name)) {
+                Label(available ? "Available" : "Not installed",
+                      systemImage: available ? "checkmark.circle.fill" : "minus.circle")
+                    .labelStyle(.titleAndIcon)
+                    .foregroundStyle(available ? AnyShapeStyle(Theme.success) : AnyShapeStyle(.secondary))
+            }
+        }
+    }
+
+    private func engineLabel(_ key: String) -> String {
+        switch key {
+        case "mlx": "MLX"
+        case "mlx_lm": "MLX-LM"
+        case "mlx_vlm": "MLX-VLM"
+        case "torch": "PyTorch"
+        case "transformers": "Transformers"
+        default: key
         }
     }
 }
