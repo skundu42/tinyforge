@@ -10,7 +10,7 @@ from fastapi import Depends, FastAPI
 
 from tinyforge import __version__
 from tinyforge.api.auth import make_token_dependency
-from tinyforge.api.routers import health, hub, runtime
+from tinyforge.api.routers import datasets, health, hub, runtime
 from tinyforge.services import Services, build_services
 
 
@@ -28,6 +28,7 @@ def create_app(token: str, services: Services | None = None) -> FastAPI:
     # Everything under /v1 requires the token.
     app.include_router(runtime.router, dependencies=[Depends(require_token)])
     app.include_router(hub.router, dependencies=[Depends(require_token)])
+    app.include_router(datasets.router, dependencies=[Depends(require_token)])
 
     # WebSocket routes validate the token from the query string internally.
     app.include_router(hub.ws_router)

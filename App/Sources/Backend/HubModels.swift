@@ -140,4 +140,9 @@ protocol BackendAPI: Sendable {
     func authStatus() async throws -> AuthStatus
     func login(token: String) async throws -> AuthStatus
     func logout() async throws
+    func previewDataset(_ source: DatasetSource, limit: Int) async throws -> DatasetPreview
+    func analyzeDataset(source: DatasetSource, spec: FormatSpec, tokenizerRepo: String, sample: Int) async throws -> TokenStats
+    func prepareDataset(name: String, source: DatasetSource, spec: FormatSpec, valFraction: Double, seed: Int, maxRows: Int?) async throws -> RegisteredDataset
+    func listDatasets() async throws -> [RegisteredDataset]
+    func deleteDataset(id: String) async throws
 }

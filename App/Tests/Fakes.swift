@@ -67,6 +67,37 @@ final class FakeBackendAPI: BackendAPI, @unchecked Sendable {
     func logout() async throws {
         auth = AuthStatus(loggedIn: false, name: nil)
     }
+
+    // Datasets
+    var preview = DatasetPreview(columns: ["text"], rows: [["text": .string("hi")]], numRows: 1)
+    var tokenStats = TokenStats(count: 1, min: 1, max: 2, mean: 1.5, p50: 1, p95: 2, histogram: [])
+    var registered: [RegisteredDataset] = []
+    private(set) var preparedName: String?
+    private(set) var deletedDataset: String?
+
+    func previewDataset(_ source: DatasetSource, limit: Int) async throws -> DatasetPreview {
+        preview
+    }
+
+    func analyzeDataset(source: DatasetSource, spec: FormatSpec, tokenizerRepo: String, sample: Int) async throws -> TokenStats {
+        tokenStats
+    }
+
+    func prepareDataset(name: String, source: DatasetSource, spec: FormatSpec, valFraction: Double, seed: Int, maxRows: Int?) async throws -> RegisteredDataset {
+        preparedName = name
+        let record = RegisteredDataset(
+            id: "ds1", name: name, targetFormat: "text", trainRows: 1, valRows: 0,
+            createdAt: "t", path: "/data/ds1")
+        registered.append(record)
+        return record
+    }
+
+    func listDatasets() async throws -> [RegisteredDataset] { registered }
+
+    func deleteDataset(id: String) async throws {
+        deletedDataset = id
+        registered.removeAll { $0.id == id }
+    }
 }
 
 /// Yields a fixed sequence of progress updates.

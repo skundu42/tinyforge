@@ -39,7 +39,9 @@ actor APIClient: BackendAPI {
     }
 
     func startDownload(repoId: String, repoType: String) async throws -> DownloadProgress {
-        try await request("POST", "v1/hub/downloads", body: ["repo_id": repoId, "repo_type": repoType])
+        try await request(
+            "POST", "v1/hub/downloads",
+            bodyData: try encoder.encode(["repo_id": repoId, "repo_type": repoType]))
     }
 
     func downloadProgress(id: String) async throws -> DownloadProgress {
@@ -60,11 +62,35 @@ actor APIClient: BackendAPI {
     }
 
     func login(token: String) async throws -> AuthStatus {
-        try await request("POST", "v1/hub/auth/login", body: ["token": token])
+        try await request("POST", "v1/hub/auth/login", bodyData: try encoder.encode(["token": token]))
     }
 
     func logout() async throws {
         let _: OkResponse = try await request("POST", "v1/hub/auth/logout")
+    }
+
+    // MARK: Datasets
+
+    func previewDataset(_ source: DatasetSource, limit: Int) async throws -> DatasetPreview {
+        try await request("POST", "v1/datasets/preview", bodyData: try encoder.encode(PreviewBody(source: source, limit: limit)))
+    }
+
+    func analyzeDataset(source: DatasetSource, spec: FormatSpec, tokenizerRepo: String, sample: Int) async throws -> TokenStats {
+        let body = AnalyzeBody(source: source, spec: spec, tokenizer_repo: tokenizerRepo, sample: sample)
+        return try await request("POST", "v1/datasets/analyze", bodyData: try encoder.encode(body))
+    }
+
+    func prepareDataset(name: String, source: DatasetSource, spec: FormatSpec, valFraction: Double, seed: Int, maxRows: Int?) async throws -> RegisteredDataset {
+        let body = PrepareBody(name: name, source: source, spec: spec, val_fraction: valFraction, seed: seed, max_rows: maxRows)
+        return try await request("POST", "v1/datasets/prepare", bodyData: try encoder.encode(body))
+    }
+
+    func listDatasets() async throws -> [RegisteredDataset] {
+        try await request("GET", "v1/datasets")
+    }
+
+    func deleteDataset(id: String) async throws {
+        let _: OkResponse = try await request("DELETE", "v1/datasets/\(id)")
     }
 
     // MARK: Transport
@@ -82,7 +108,7 @@ actor APIClient: BackendAPI {
         _ path: String,
         authorized: Bool = true,
         query: [URLQueryItem] = [],
-        body: [String: String]? = nil
+        bodyData: Data? = nil
     ) async throws -> T {
         var components = URLComponents(
             url: baseURL.appending(path: path), resolvingAgainstBaseURL: false
@@ -96,8 +122,8 @@ actor APIClient: BackendAPI {
         if authorized {
             urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        if let body {
-            urlRequest.httpBody = try encoder.encode(body)
+        if let bodyData {
+            urlRequest.httpBody = bodyData
             urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
 
@@ -120,4 +146,25 @@ private struct FreedResponse: Decodable {
 
 private struct OkResponse: Decodable {
     let ok: Bool
+}
+
+private struct PreviewBody: Encodable {
+    let source: DatasetSource
+    let limit: Int
+}
+
+private struct AnalyzeBody: Encodable {
+    let source: DatasetSource
+    let spec: FormatSpec
+    let tokenizer_repo: String
+    let sample: Int
+}
+
+private struct PrepareBody: Encodable {
+    let name: String
+    let source: DatasetSource
+    let spec: FormatSpec
+    let val_fraction: Double
+    let seed: Int
+    let max_rows: Int?
 }

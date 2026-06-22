@@ -7,8 +7,8 @@ finetuning product; M6 adds breadth; M7 is packaging/polish.
 |-----------|-------|--------|
 | **M0** | Foundations / walking skeleton: SwiftUI app ⇄ embedded Python FastAPI sidecar, process lifecycle, health/runtime | ✅ done |
 | **M1** | HuggingFace Hub browse/download + cache + token auth | ✅ done |
-| M2 | Dataset builder (import, format, tokenize preview, splits) | ⬜ next |
-| M3 | LLM LoRA finetuning (MLX) + live dashboards + experiment tracking | ⬜ |
+| **M2** | Dataset builder (import, format, tokenize preview, splits) | ✅ done |
+| M3 | LLM LoRA finetuning (MLX) + live dashboards + experiment tracking | ⬜ next |
 | M4 | Inference playground (base vs finetuned, streaming) | ⬜ |
 | M5 | Exports (safetensors/LoRA, GGUF, Core ML, MLX) + push to Hub | ⬜ |
 | M6 | PyTorch/MPS engine: vision, audio, from-scratch, TRL methods | ⬜ |
@@ -56,6 +56,26 @@ Full HuggingFace Hub integration, native end-to-end.
   URL-safe hex token).
 
 Backend: 45 pytest tests. App: 25 Swift Testing tests.
+
+## M2 — delivered
+
+A dataset builder that turns raw data into mlx-lm-ready splits.
+
+- **Backend** (`tinyforge/datasets/`): load HF or local JSON/CSV/Parquet
+  (datasets v5) + preview; formatting into mlx-lm `text` / `completion` /
+  `chat` (built-in templates incl. Alpaca); tokenization preview + length
+  histogram (via `tokenizers`, no torch); deterministic train/val split; a
+  JSONL + SQLite registry of prepared datasets; `/v1/datasets` routes.
+  App data under `~/Library/Application Support/TinyForge/` (overridable via
+  `TINYFORGE_DATA_DIR`).
+- **App** (`Features/Datasets`): a builder UI — source (Hub/local), preview
+  table, format + column mapping, optional token-length analysis (Swift
+  Charts histogram), validation-split slider, and a registry of prepared
+  datasets.
+- **Verified e2e** (offline, hermetic): real client → backend → local JSONL →
+  preview + Alpaca prepare → registered `train.jsonl` in `completion` format.
+
+Backend: 71 pytest tests. App: 30 Swift Testing tests.
 
 ## Conventions
 - TDD: tests first (see `backend/tests/`, `App/Tests/`).
