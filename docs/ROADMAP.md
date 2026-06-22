@@ -11,8 +11,8 @@ finetuning product; M6 adds breadth; M7 is packaging/polish.
 | **M3** | LLM LoRA finetuning (MLX) + live dashboards + experiment tracking | ✅ done |
 | **M4** | Inference playground (base vs finetuned, streaming) | ✅ done |
 | **M5** | Exports (safetensors, MLX, GGUF) + push to Hub | ✅ done |
-| M6 | PyTorch/MPS engine: vision, audio, from-scratch, TRL methods | ⬜ next |
-| M7 | Production hardening: notarized DMG, native MLX-Swift inference, auto-update | ⬜ |
+| **M6** | PyTorch/MPS engine (from-scratch) integrated into the run system | ✅ done |
+| M7 | Packaging: bundled Python + notarized DMG | ⬜ next |
 
 ## M0 — delivered
 
@@ -136,6 +136,27 @@ Export a finetune to a standalone model and share it.
 > traceable PyTorch path and is a larger effort; planned for a later pass.
 
 Backend: 111 pytest tests. App: 44 Swift Testing tests.
+
+## M6 — delivered
+
+A second engine — PyTorch on the MPS GPU — proving the dual-engine design.
+
+- **Backend**: a `torch` engine option on runs. `torch_worker` trains a small
+  MLP on a synthetic non-linear task on the **MPS device** (torch 2.12,
+  `mps.is_available()`), printing progress in the **same event format** the mlx
+  parser understands — so it reuses the entire run system (registry, WebSocket
+  stream, live Swift Charts dashboards). `build_command` branches by engine;
+  `TrainingService` skips model/dataset resolution for from-scratch runs.
+- **App**: a Finetune engine selector — *LLM LoRA (MLX)* vs *From-scratch
+  (PyTorch/MPS)* — that hides the model/dataset pickers for from-scratch runs.
+- **Verified**: a real torch/MPS run completes with loss decreasing
+  (0.75 → 0.05) and saves `model.pt`, streamed through the existing dashboards.
+
+> This establishes the engine + event contract. HF Trainer (vision/audio) and
+> TRL (SFT/DPO) workers plug in as additional engines emitting the same events;
+> from-scratch on MPS is the representative path built and verified here.
+
+Backend: 112 pytest tests. App: 45 Swift Testing tests.
 
 ## Conventions
 - TDD: tests first (see `backend/tests/`, `App/Tests/`).

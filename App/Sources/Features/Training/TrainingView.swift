@@ -26,30 +26,40 @@ struct TrainingView: View {
             VStack(alignment: .leading, spacing: 10) {
                 TextField("Run name", text: $model.name).textFieldStyle(.roundedBorder)
 
-                if model.cachedModels.isEmpty {
-                    hint("Download a model in the Hub tab first.")
-                } else {
-                    Picker("Base model", selection: $model.modelRepo) {
-                        Text("Select…").tag("")
-                        ForEach(model.cachedModels) { Text($0.repoId).tag($0.repoId) }
-                    }
-                }
-
-                if model.datasets.isEmpty {
-                    hint("Prepare a dataset in the Datasets tab first.")
-                } else {
-                    Picker("Dataset", selection: $model.datasetId) {
-                        Text("Select…").tag("")
-                        ForEach(model.datasets) { Text($0.name).tag($0.id) }
-                    }
-                }
-
-                Picker("Method", selection: $model.fineTuneType) {
-                    Text("LoRA").tag("lora")
-                    Text("DoRA").tag("dora")
-                    Text("Full").tag("full")
+                Picker("Engine", selection: $model.engine) {
+                    Text("LLM LoRA (MLX)").tag("mlx")
+                    Text("From-scratch (PyTorch/MPS)").tag("torch")
                 }
                 .pickerStyle(.segmented)
+
+                if model.isLLM {
+                    if model.cachedModels.isEmpty {
+                        hint("Download a model in the Hub tab first.")
+                    } else {
+                        Picker("Base model", selection: $model.modelRepo) {
+                            Text("Select…").tag("")
+                            ForEach(model.cachedModels) { Text($0.repoId).tag($0.repoId) }
+                        }
+                    }
+
+                    if model.datasets.isEmpty {
+                        hint("Prepare a dataset in the Datasets tab first.")
+                    } else {
+                        Picker("Dataset", selection: $model.datasetId) {
+                            Text("Select…").tag("")
+                            ForEach(model.datasets) { Text($0.name).tag($0.id) }
+                        }
+                    }
+
+                    Picker("Method", selection: $model.fineTuneType) {
+                        Text("LoRA").tag("lora")
+                        Text("DoRA").tag("dora")
+                        Text("Full").tag("full")
+                    }
+                    .pickerStyle(.segmented)
+                } else {
+                    hint("Trains a small MLP on a synthetic task on the MPS GPU — a from-scratch demo of the PyTorch engine.")
+                }
 
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                     GridRow {

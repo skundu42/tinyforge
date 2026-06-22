@@ -13,6 +13,7 @@ dependencies = [
     "tokenizers>=0.22,<0.24",
     "mlx>=0.31.2",
     "mlx-lm>=0.31.1",
+    "torch>=2.12.1",
 ]
 
 [project.scripts]

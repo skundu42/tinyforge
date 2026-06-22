@@ -43,11 +43,14 @@ class TrainingService:
 
     def start(self, request: StartRunRequest) -> RunRecord:
         run_id = self._id_factory()
-        data_dir = self._resolve_dataset(request.dataset_id)
+        # The from-scratch torch engine needs no LLM model/dataset.
+        data_dir = self._resolve_dataset(request.dataset_id) if request.engine == "mlx" else "(none)"
+        model_repo = request.model_repo or ("(from-scratch MLP)" if request.engine == "torch" else "")
         adapter_path = str(self._runs_dir / run_id)
         config = RunConfig(
-            name=request.name, model_repo=request.model_repo, data_dir=data_dir,
-            adapter_path=adapter_path, fine_tune_type=request.fine_tune_type,
+            name=request.name, model_repo=model_repo, data_dir=data_dir,
+            adapter_path=adapter_path, engine=request.engine,
+            fine_tune_type=request.fine_tune_type,
             num_layers=request.num_layers, batch_size=request.batch_size,
             iters=request.iters, learning_rate=request.learning_rate,
             steps_per_report=request.steps_per_report, steps_per_eval=request.steps_per_eval,
@@ -56,7 +59,7 @@ class TrainingService:
         )
         self._runner.start(config, run_id=run_id)
         record = RunRecord(
-            id=run_id, name=request.name, model_repo=request.model_repo,
+            id=run_id, name=request.name, model_repo=model_repo,
             dataset_id=request.dataset_id, state="running", created_at=self._clock(),
             adapter_path=adapter_path, config=config.model_dump(),
         )

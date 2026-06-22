@@ -4,6 +4,7 @@ struct StartRunRequest: Codable, Sendable {
     var name: String
     var modelRepo: String
     var datasetId: String
+    var engine: String = "mlx"
     var fineTuneType: String = "lora"
     var numLayers: Int = 16
     var batchSize: Int = 1
@@ -16,7 +17,7 @@ struct StartRunRequest: Codable, Sendable {
     var seed: Int = 0
 
     enum CodingKeys: String, CodingKey {
-        case name, iters, seed
+        case name, iters, seed, engine
         case modelRepo = "model_repo"
         case datasetId = "dataset_id"
         case fineTuneType = "fine_tune_type"

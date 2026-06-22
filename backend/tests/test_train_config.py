@@ -36,3 +36,14 @@ def test_build_command_includes_core_flags() -> None:
 def test_grad_checkpoint_flag_toggles() -> None:
     assert "--grad-checkpoint" in build_command(base_config(grad_checkpoint=True), "py")
     assert "--grad-checkpoint" not in build_command(base_config(grad_checkpoint=False), "py")
+
+
+def test_build_command_torch_engine_uses_torch_worker() -> None:
+    cmd = build_command(base_config(engine="torch", iters=50, learning_rate=1e-3, batch_size=32), "py")
+    assert cmd[:3] == ["py", "-m", "tinyforge.train.torch_worker"]
+    joined = " ".join(cmd)
+    assert "--iters 50" in joined
+    assert "--adapter-path /runs/r1" in joined
+    assert "--batch-size 32" in joined
+    # torch from-scratch path doesn't reference an LLM model/dataset
+    assert "mlx_lm" not in joined

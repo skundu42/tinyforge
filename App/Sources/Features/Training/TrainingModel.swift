@@ -8,6 +8,7 @@ import Observation
 final class TrainingModel {
     // Config
     var name = ""
+    var engine = "mlx"  // mlx (LLM LoRA) | torch (from-scratch MPS)
     var modelRepo = ""
     var datasetId = ""
     var fineTuneType = "lora"
@@ -45,7 +46,11 @@ final class TrainingModel {
     }
 
     var isRunning: Bool { runState == "running" }
-    var canStart: Bool { !modelRepo.isEmpty && !datasetId.isEmpty && !name.isEmpty && !isRunning }
+    var isLLM: Bool { engine == "mlx" }
+    var canStart: Bool {
+        guard !name.isEmpty, !isRunning else { return false }
+        return isLLM ? (!modelRepo.isEmpty && !datasetId.isEmpty) : true
+    }
 
     func loadInputs() async {
         datasets = (try? await api.listDatasets()) ?? []
@@ -60,8 +65,8 @@ final class TrainingModel {
     func start() async {
         resetMetrics()
         let request = StartRunRequest(
-            name: name, modelRepo: modelRepo, datasetId: datasetId, fineTuneType: fineTuneType,
-            numLayers: numLayers, batchSize: batchSize, iters: iters,
+            name: name, modelRepo: modelRepo, datasetId: datasetId, engine: engine,
+            fineTuneType: fineTuneType, numLayers: numLayers, batchSize: batchSize, iters: iters,
             learningRate: learningRate, maxSeqLength: maxSeqLength
         )
         do {
