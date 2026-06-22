@@ -11,6 +11,7 @@ struct HubBrowserView: View {
             content
         }
         .navigationTitle("Models")
+        .task { await model.loadDownloaded() }
     }
 
     private var searchBar: some View {
@@ -37,10 +38,14 @@ struct HubBrowserView: View {
     private var content: some View {
         switch model.phase {
         case .idle:
-            EmptyState(
-                systemImage: "square.stack.3d.up",
-                title: "Find a model to start",
-                message: "Search HuggingFace for a small model — try “SmolLM”, “Llama 3.2”, or “Qwen”. Models from the mlx-community account are ready to finetune.")
+            if model.downloadedModels.isEmpty {
+                EmptyState(
+                    systemImage: "square.stack.3d.up",
+                    title: "Find a model to start",
+                    message: "Search HuggingFace for a small model — try “SmolLM”, “Llama 3.2”, or “Qwen”. Models from the mlx-community account are ready to finetune.")
+            } else {
+                downloadedSection
+            }
         case .searching:
             ProgressView("Searching…").frame(maxWidth: .infinity, maxHeight: .infinity)
         case .failed(let message):
@@ -71,6 +76,32 @@ struct HubBrowserView: View {
         }
     }
 
+    private var downloadedSection: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Space.l) {
+                Panel(
+                    title: "Downloaded models",
+                    subtitle: "\(model.downloadedModels.count) on your Mac · ready to finetune",
+                    systemImage: "internaldrive.fill"
+                ) {
+                    VStack(spacing: 0) {
+                        ForEach(Array(model.downloadedModels.enumerated()), id: \.element.id) { index, repo in
+                            DownloadedModelRow(repo: repo) {
+                                Task { await model.deleteDownloaded(repo.repoId) }
+                            }
+                            if index < model.downloadedModels.count - 1 { Divider() }
+                        }
+                    }
+                }
+                Text("Search above to find and download more models.")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+            .padding(Theme.Space.l)
+            .frame(maxWidth: 720, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
     @ViewBuilder
     private var detailPane: some View {
         if model.detailLoading {
@@ -85,6 +116,31 @@ struct HubBrowserView: View {
                 title: "Pick a model",
                 message: "Select a result on the left to see its files and download it.")
         }
+    }
+}
+
+private struct DownloadedModelRow: View {
+    let repo: CachedRepo
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(spacing: Theme.Space.m) {
+            Image(systemName: "cube.fill").foregroundStyle(Theme.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(repo.repoId).font(.callout.weight(.medium)).lineLimit(1)
+                Text("\(repo.nbFiles) file\(repo.nbFiles == 1 ? "" : "s")")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(ByteFormat.string(repo.sizeOnDisk))
+                .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+            Button(role: .destructive, action: onDelete) {
+                Image(systemName: "trash")
+            }
+            .buttonStyle(.borderless)
+            .help("Remove from local cache")
+        }
+        .padding(.vertical, 6)
     }
 }
 
