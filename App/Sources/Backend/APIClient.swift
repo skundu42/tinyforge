@@ -111,6 +111,20 @@ actor APIClient: BackendAPI {
         let _: OkResponse = try await request("POST", "v1/runs/\(id)/stop")
     }
 
+    // MARK: Exports
+
+    func startExport(_ request: ExportRequest) async throws -> ExportStatus {
+        try await self.request("POST", "v1/exports", bodyData: try encoder.encode(request))
+    }
+
+    func listExports() async throws -> [ExportStatus] {
+        try await request("GET", "v1/exports")
+    }
+
+    func getExport(id: String) async throws -> ExportStatus {
+        try await request("GET", "v1/exports/\(id)")
+    }
+
     // MARK: Transport
 
     private func searchQuery(_ query: String?, _ sort: String, _ limit: Int) -> [URLQueryItem] {

@@ -149,4 +149,7 @@ protocol BackendAPI: Sendable {
     func listRuns() async throws -> [RunRecord]
     func runStatus(id: String) async throws -> RunStatus
     func stopRun(id: String) async throws
+    func startExport(_ request: ExportRequest) async throws -> ExportStatus
+    func listExports() async throws -> [ExportStatus]
+    func getExport(id: String) async throws -> ExportStatus
 }

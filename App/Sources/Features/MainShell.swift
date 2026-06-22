@@ -7,6 +7,7 @@ struct MainShell: View {
         case datasets = "Datasets"
         case train = "Finetune"
         case playground = "Playground"
+        case export = "Export"
         case settings = "Settings"
         var id: String { rawValue }
         var icon: String {
@@ -15,6 +16,7 @@ struct MainShell: View {
             case .datasets: "tablecells.fill"
             case .train: "bolt.fill"
             case .playground: "sparkles"
+            case .export: "shippingbox.fill"
             case .settings: "gearshape.fill"
             }
         }
@@ -25,6 +27,7 @@ struct MainShell: View {
     @State private var datasets: DatasetBuilderModel
     @State private var training: TrainingModel
     @State private var playground: PlaygroundModel
+    @State private var export: ExportModel
     @State private var settings: SettingsModel
     private let runtime: RuntimeInfo?
 
@@ -37,6 +40,7 @@ struct MainShell: View {
         _datasets = State(initialValue: DatasetBuilderModel(api: api))
         _training = State(initialValue: TrainingModel(api: api, events: runEvents))
         _playground = State(initialValue: PlaygroundModel(api: api, infer: inference))
+        _export = State(initialValue: ExportModel(api: api))
         _settings = State(initialValue: SettingsModel(api: api))
         self.runtime = runtime
     }
@@ -54,6 +58,7 @@ struct MainShell: View {
             case .datasets: DatasetBuilderView(model: datasets)
             case .train: TrainingView(model: training)
             case .playground: PlaygroundView(model: playground)
+            case .export: ExportView(model: export)
             case .settings: SettingsView(model: settings)
             }
         }

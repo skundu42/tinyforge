@@ -10,8 +10,8 @@ finetuning product; M6 adds breadth; M7 is packaging/polish.
 | **M2** | Dataset builder (import, format, tokenize preview, splits) | ✅ done |
 | **M3** | LLM LoRA finetuning (MLX) + live dashboards + experiment tracking | ✅ done |
 | **M4** | Inference playground (base vs finetuned, streaming) | ✅ done |
-| M5 | Exports (safetensors/LoRA, GGUF, Core ML, MLX) + push to Hub | ⬜ next |
-| M6 | PyTorch/MPS engine: vision, audio, from-scratch, TRL methods | ⬜ |
+| **M5** | Exports (safetensors, MLX, GGUF) + push to Hub | ✅ done |
+| M6 | PyTorch/MPS engine: vision, audio, from-scratch, TRL methods | ⬜ next |
 | M7 | Production hardening: notarized DMG, native MLX-Swift inference, auto-update | ⬜ |
 
 ## M0 — delivered
@@ -115,6 +115,27 @@ An inference playground that streams generations, base vs finetuned.
   WebSocket from the cached model.
 
 Backend: 100 pytest tests. App: 39 Swift Testing tests.
+
+## M5 — delivered
+
+Export a finetune to a standalone model and share it.
+
+- **Backend** (`tinyforge/export/`): `ExportManager` fuses the LoRA adapter into
+  its base (`mlx_lm.fuse`) → **safetensors** (HF format); **MLX-quantized**
+  (`mlx_lm.convert -q`, configurable bits); **GGUF** (`fuse --gguf-path`, for
+  supported architectures); optional **push to Hub** (`upload_folder` + auto
+  `ModelCard`). Runs as a job; injectable command runner / pusher / run
+  resolver. `/v1/exports` routes.
+- **App** (`Features/Export`): pick a completed run, choose a format (+ quant
+  bits for MLX), optionally enter a Hub repo to push to, run the export, and
+  see export history with output paths + Hub links.
+- **Verified**: a real fuse → safetensors export produces a complete HF-format
+  model (`model.safetensors` + `config.json` + tokenizer).
+
+> Core ML export is deferred: converting MLX/HF weights via coremltools needs a
+> traceable PyTorch path and is a larger effort; planned for a later pass.
+
+Backend: 111 pytest tests. App: 44 Swift Testing tests.
 
 ## Conventions
 - TDD: tests first (see `backend/tests/`, `App/Tests/`).

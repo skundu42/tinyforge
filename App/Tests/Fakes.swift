@@ -124,6 +124,28 @@ final class FakeBackendAPI: BackendAPI, @unchecked Sendable {
     func stopRun(id: String) async throws {
         stoppedRun = id
     }
+
+    // Exports
+    var exports: [ExportStatus] = []
+    var exportResult: ExportStatus?
+    private(set) var startedExport: ExportRequest?
+
+    func startExport(_ request: ExportRequest) async throws -> ExportStatus {
+        startedExport = request
+        let status = exportResult ?? ExportStatus(
+            id: "exp1", runId: request.runId, target: request.target, state: "completed",
+            error: nil, outputPath: "/exports/exp1/fused", hubUrl: nil)
+        exports.append(status)
+        return status
+    }
+
+    func listExports() async throws -> [ExportStatus] { exports }
+
+    func getExport(id: String) async throws -> ExportStatus {
+        exportResult ?? exports.first { $0.id == id } ?? ExportStatus(
+            id: id, runId: "r1", target: "safetensors", state: "completed",
+            error: nil, outputPath: "/exports/exp1/fused", hubUrl: nil)
+    }
 }
 
 struct FakeRunEventStreaming: RunEventStreaming {
