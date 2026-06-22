@@ -35,9 +35,9 @@ enum BackendLauncher {
         }
         #endif
 
-        // 3) Python runtime bundled inside the app.
+        // 3) Python runtime bundled inside the app (relocatable, self-contained).
         if let resources = bundle.resourceURL {
-            let python = resources.appending(path: "python/venv/bin/python3")
+            let python = resources.appending(path: "python/bin/python3")
             if fileManager.isExecutableFile(atPath: python.path) {
                 return LaunchSpec(
                     executable: python,

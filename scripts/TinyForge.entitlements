@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Load PyPI wheels' native libs signed by other Team IDs (defence-in-depth). -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <!-- Required by CPython and native ML runtimes (W^X relaxation). -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <!-- Python 3.13 JIT, torch.compile/Inductor, MLX Metal kernel compilation. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+</dict>
+</plist>

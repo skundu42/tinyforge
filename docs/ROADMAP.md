@@ -12,7 +12,7 @@ finetuning product; M6 adds breadth; M7 is packaging/polish.
 | **M4** | Inference playground (base vs finetuned, streaming) | ✅ done |
 | **M5** | Exports (safetensors, MLX, GGUF) + push to Hub | ✅ done |
 | **M6** | PyTorch/MPS engine (from-scratch) integrated into the run system | ✅ done |
-| M7 | Packaging: bundled Python + notarized DMG | ⬜ next |
+| **M7** | Packaging: bundled Python + signed/notarized DMG | ✅ done |
 
 ## M0 — delivered
 
@@ -157,6 +157,24 @@ A second engine — PyTorch on the MPS GPU — proving the dual-engine design.
 > from-scratch on MPS is the representative path built and verified here.
 
 Backend: 112 pytest tests. App: 45 Swift Testing tests.
+
+## M7 — delivered
+
+A self-contained, distributable app.
+
+- **`scripts/bundle_python.sh`**: a relocatable python-build-standalone CPython
+  (~1 GB with torch/mlx/transformers) installed directly into its site-packages;
+  the app launches it via `Contents/Resources/python/bin/python3 -m tinyforge`.
+- **`scripts/sign.sh`**: inside-out Developer-ID signing (not `--deep`) with
+  hardened-runtime entitlements (`disable-library-validation`,
+  `allow-unsigned-executable-memory`, `allow-jit`).
+- **`scripts/package_dmg.sh`** + **`scripts/notarize.sh`**: signed DMG +
+  notarytool submit/staple. **`scripts/build_release.sh`** orchestrates the lot.
+- **Verified**: the bundled runtime starts the backend standalone, and a Release
+  app spawns the **bundled** interpreter — no dev-toolchain dependency.
+  (Notarization itself needs your Apple ID credentials; see `docs/packaging.md`.)
+
+App: 45 Swift Testing tests. Backend: 112 pytest tests.
 
 ## Conventions
 - TDD: tests first (see `backend/tests/`, `App/Tests/`).
