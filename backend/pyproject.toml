@@ -15,6 +15,7 @@ dependencies = [
     "mlx-lm>=0.31.1",
     "torch>=2.12.1",
     "accelerate>=1.14.0",
+    "coremltools>=9.0",
 ]
 
 [project.scripts]

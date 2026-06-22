@@ -31,6 +31,16 @@ def _default_run_command(cmd: list[str], cwd: str) -> tuple[int, str]:
     return result.returncode, (result.stdout + result.stderr)
 
 
+def _default_coreml(run_path: str, out_path: str) -> str:
+    from tinyforge.export.coreml import convert_run_to_coreml
+
+    return convert_run_to_coreml(run_path, out_path)
+
+
+# coreml_fn(run_path, out_path) -> path to the produced .mlpackage
+CoreMLFn = Callable[[str, str], str]
+
+
 @dataclass
 class _Export:
     id: str
@@ -50,6 +60,7 @@ class ExportManager:
         run_resolver: RunResolver,
         run_command: RunCommandFn = _default_run_command,
         push_fn: PushFn | None = None,
+        coreml_fn: CoreMLFn = _default_coreml,
         id_factory: Callable[[], str] = lambda: uuid.uuid4().hex,
     ) -> None:
         self._python = python_exe
@@ -57,6 +68,7 @@ class ExportManager:
         self._resolve_run = run_resolver
         self._run_command = run_command
         self._push_fn = push_fn
+        self._coreml_fn = coreml_fn
         self._id_factory = id_factory
         self._jobs: dict[str, _Export] = {}
         self._lock = threading.Lock()
@@ -73,6 +85,18 @@ class ExportManager:
         base_repo, adapter_path = self._resolve_run(request.run_id)
         out_dir = self._exports_dir / job.id
         out_dir.mkdir(parents=True, exist_ok=True)
+
+        # Core ML converts the run's saved (traceable) model directly — no fuse.
+        if request.target == "coreml":
+            try:
+                path = self._coreml_fn(adapter_path, str(out_dir / "Model.mlpackage"))
+            except Exception as exc:  # noqa: BLE001
+                return self._fail(job, f"Core ML conversion failed: {exc}")
+            with self._lock:
+                job.output_path = path
+                job.state = "completed"
+            return
+
         fused = out_dir / "fused"
         gguf = out_dir / "model.gguf" if request.target == "gguf" else None
 

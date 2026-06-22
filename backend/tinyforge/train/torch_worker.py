@@ -83,7 +83,8 @@ def main(argv: list[str] | None = None) -> None:
 
     os.makedirs(args.adapter_path, exist_ok=True)
     out_path = os.path.join(args.adapter_path, "model.pt")
-    torch.save(model.state_dict(), out_path)
+    # Save the whole module (on CPU) so it can be traced for Core ML export.
+    torch.save(model.to("cpu"), out_path)
     print(f"Saved final weights to {out_path}.", flush=True)
 
 

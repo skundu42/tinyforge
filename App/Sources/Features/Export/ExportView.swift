@@ -19,11 +19,16 @@ struct ExportView: View {
                         }
 
                         Picker("Format", selection: $model.target) {
-                            Text("safetensors (HF)").tag("safetensors")
-                            Text("MLX (quantized)").tag("mlx")
+                            Text("safetensors").tag("safetensors")
+                            Text("MLX").tag("mlx")
                             Text("GGUF").tag("gguf")
+                            Text("Core ML").tag("coreml")
                         }
                         .pickerStyle(.segmented)
+                        if model.target == "coreml" {
+                            Text("Core ML works with from-scratch and vision runs (not LLM/MLX adapters).")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
 
                         if model.target == "mlx" {
                             Stepper("Quantization: \(model.qBits)-bit", value: $model.qBits, in: 2...8)

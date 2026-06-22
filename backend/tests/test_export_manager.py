@@ -15,12 +15,13 @@ def _wait(predicate, timeout=2.0):
     return False
 
 
-def manager(tmp_path, *, run_command, push_fn=None, log=None):
+def manager(tmp_path, *, run_command, push_fn=None, coreml_fn=None, log=None):
     return ExportManager(
         python_exe="py", exports_dir=tmp_path,
         run_resolver=lambda run_id: ("base/m", f"/adapters/{run_id}"),
         run_command=run_command,
         push_fn=push_fn or (lambda path, repo, base: f"https://hf.co/{repo}"),
+        coreml_fn=coreml_fn or (lambda run_path, out: out),
         id_factory=lambda: "exp1",
     )
 
@@ -57,6 +58,21 @@ def test_gguf_export_passes_gguf_path(tmp_path) -> None:
     assert _wait(lambda: mgr.status(job_id).state == "completed")
 
     assert "--gguf-path" in log[0]
+
+
+def test_coreml_export_calls_coreml_fn(tmp_path) -> None:
+    calls: list[tuple] = []
+    mgr = manager(
+        tmp_path, run_command=lambda cmd, cwd: (0, ""),
+        coreml_fn=lambda run_path, out: (calls.append((run_path, out)) or out),
+    )
+
+    job_id = mgr.start(ExportRequest(run_id="r1", target="coreml"))
+    assert _wait(lambda: mgr.status(job_id).state == "completed")
+
+    status = mgr.status(job_id)
+    assert status.output_path.endswith("Model.mlpackage")
+    assert calls and calls[0][0] == "/adapters/r1"
 
 
 def test_fuse_failure_marks_failed_with_error(tmp_path) -> None:
