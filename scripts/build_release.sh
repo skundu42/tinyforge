@@ -9,6 +9,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="$ROOT/build"
 RUNTIME="$BUILD/python-runtime/python"
 IDENTITY="${SIGN_IDENTITY:-Developer ID Application: Sandipan Kundu (K9ATTR44A7)}"
+# Marketing version baked into the build (CI passes the release tag, e.g. 0.1.0).
+MARKETING_VERSION="${MARKETING_VERSION:-0.0.1}"
 
 echo "==> [1/5] bundle Python runtime (if missing)"
 [[ -x "$RUNTIME/bin/python3" ]] || "$ROOT/scripts/bundle_python.sh"
@@ -17,6 +19,7 @@ echo "==> [2/5] build the app (Release)"
 ( cd "$ROOT/App" && xcodegen generate >/dev/null && \
   xcodebuild build -project TinyForge.xcodeproj -scheme TinyForge \
     -configuration Release -derivedDataPath "$BUILD" -skipMacroValidation \
+    MARKETING_VERSION="$MARKETING_VERSION" \
     CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO >/dev/null )
 APP="$BUILD/Build/Products/Release/TinyForge.app"
 

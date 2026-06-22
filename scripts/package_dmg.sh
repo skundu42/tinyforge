@@ -14,7 +14,10 @@ ln -s /Applications "$STAGING/Applications"
 mkdir -p "$(dirname "$DMG")"
 rm -f "$DMG"
 hdiutil create -volname "TinyForge" -srcfolder "$STAGING" -ov -format UDZO "$DMG"
-codesign --force --timestamp --sign "$IDENTITY" "$DMG"
+# Ad-hoc identity ("-") can't use the secure timestamp server.
+TIMESTAMP="--timestamp"
+[[ "$IDENTITY" == "-" ]] && TIMESTAMP="--timestamp=none"
+codesign --force "$TIMESTAMP" --sign "$IDENTITY" "$DMG"
 rm -rf "$STAGING"
 
 echo "==> DMG: $DMG ($(du -sh "$DMG" | cut -f1))"

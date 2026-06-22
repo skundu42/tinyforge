@@ -9,8 +9,13 @@ IDENTITY="${2:-Developer ID Application: Sandipan Kundu (K9ATTR44A7)}"
 ENTITLEMENTS="$(cd "$(dirname "$0")" && pwd)/TinyForge.entitlements"
 PYDIR="$APP/Contents/Resources/python"
 
-sign_lib() { codesign --force --options runtime --timestamp --sign "$IDENTITY" "$1"; }
-sign_exe() { codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$1"; }
+# Ad-hoc signing (identity "-", e.g. an unsigned CI build) can't reach Apple's
+# secure timestamp server, so request no timestamp in that case.
+TIMESTAMP="--timestamp"
+[[ "$IDENTITY" == "-" ]] && TIMESTAMP="--timestamp=none"
+
+sign_lib() { codesign --force --options runtime "$TIMESTAMP" --sign "$IDENTITY" "$1"; }
+sign_exe() { codesign --force --options runtime "$TIMESTAMP" --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$1"; }
 
 if [[ -d "$PYDIR" ]]; then
   echo "==> signing nested native libraries (.so/.dylib)"
@@ -29,7 +34,7 @@ if [[ -d "$PYDIR" ]]; then
 fi
 
 echo "==> signing the app bundle"
-codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$APP"
+codesign --force --options runtime "$TIMESTAMP" --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$APP"
 
 echo "==> verifying signature"
 codesign --verify --deep --strict --verbose=2 "$APP"
