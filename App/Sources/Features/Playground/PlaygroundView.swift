@@ -5,7 +5,8 @@ struct PlaygroundView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            controls
+            promptPanel
+                .padding(Theme.Space.l)
             Divider()
             outputs
         }
@@ -13,51 +14,78 @@ struct PlaygroundView: View {
         .task { await model.loadInputs() }
     }
 
-    private var controls: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
+    private var promptPanel: some View {
+        Panel(title: "Prompt", subtitle: "Generate text and compare base vs. finetuned", systemImage: "text.bubble.fill") {
+            VStack(alignment: .leading, spacing: Theme.Space.m) {
                 if model.cachedModels.isEmpty {
-                    Text("Download a model in the Hub tab first.")
+                    Text("Download a model in the Models tab first.")
                         .font(.callout).foregroundStyle(.secondary)
                 } else {
-                    Picker("Model", selection: $model.modelRepo) {
-                        Text("Select…").tag("")
-                        ForEach(model.cachedModels) { Text($0.repoId).tag($0.repoId) }
-                    }
-                    Picker("Adapter", selection: $model.adapterRunId) {
-                        Text("None (base only)").tag("")
-                        ForEach(model.runs) { Text($0.name).tag($0.id) }
-                    }
-                }
-            }
-            TextEditor(text: $model.prompt)
-                .font(.body)
-                .frame(height: 64)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
-            HStack(spacing: 20) {
-                slider("Temp", $model.temp, 0...1.5)
-                slider("Top-p", $model.topP, 0...1)
-                Stepper("Max tokens: \(model.maxTokens)", value: $model.maxTokens, in: 16...1024, step: 16)
-                    .fixedSize()
-                Spacer()
-                Button { Task { await model.generate() } } label: {
-                    if model.generating { ProgressView().controlSize(.small) } else {
-                        Label("Generate", systemImage: "sparkles")
+                    HStack(spacing: Theme.Space.l) {
+                        Picker("Model", selection: $model.modelRepo) {
+                            Text("Select…").tag("")
+                            ForEach(model.cachedModels) { Text($0.repoId).tag($0.repoId) }
+                        }
+                        Picker("Adapter", selection: $model.adapterRunId) {
+                            Text("None (base only)").tag("")
+                            ForEach(model.runs) { Text($0.name).tag($0.id) }
+                        }
                     }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(!model.canGenerate)
-            }
-            if let error = model.error {
-                Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.orange).font(.caption)
+
+                TextEditor(text: $model.prompt)
+                    .font(.body)
+                    .frame(height: 70)
+                    .scrollContentBackground(.hidden)
+                    .padding(8)
+                    .background(Color(nsColor: .textBackgroundColor),
+                               in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.hairline))
+
+                HStack(alignment: .bottom, spacing: Theme.Space.xl) {
+                    samplingSlider("Temperature", value: $model.temp, range: 0...1.5)
+                    samplingSlider("Top-p", value: $model.topP, range: 0...1)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Max tokens").font(.caption).foregroundStyle(.secondary)
+                        Stepper("\(model.maxTokens)", value: $model.maxTokens, in: 16...1024, step: 16)
+                            .fixedSize()
+                    }
+                    Spacer(minLength: Theme.Space.l)
+                    Button { Task { await model.generate() } } label: {
+                        if model.generating {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Label("Generate", systemImage: "sparkles")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!model.canGenerate)
+                }
+
+                if let error = model.error {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(Theme.ember).font(.caption)
+                }
             }
         }
-        .padding(16)
+    }
+
+    private func samplingSlider(_ label: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(label).font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Text(value.wrappedValue.formatted(.number.precision(.fractionLength(2))))
+                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            Slider(value: value, in: range)
+        }
+        .frame(width: 160)
     }
 
     private var outputs: some View {
         HStack(spacing: 0) {
-            outputPane(title: model.hasAdapter ? "Base" : "Output", text: model.baseOutput)
+            outputPane(title: model.hasAdapter ? "Base" : "Output", text: model.baseOutput, accent: false)
             if model.hasAdapter {
                 Divider()
                 outputPane(title: "Finetuned", text: model.adapterOutput, accent: true)
@@ -65,30 +93,24 @@ struct PlaygroundView: View {
         }
     }
 
-    private func outputPane(title: String, text: String, accent: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(accent ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                .padding(.horizontal, 16).padding(.top, 12)
+    private func outputPane(title: String, text: String, accent: Bool) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            HStack(spacing: 6) {
+                if accent { Image(systemName: "sparkle").font(.caption2).foregroundStyle(Theme.ember) }
+                Text(title).font(.caption.weight(.semibold))
+                    .foregroundStyle(accent ? AnyShapeStyle(Theme.ember) : AnyShapeStyle(.secondary))
+            }
+            .padding(.horizontal, Theme.Space.l).padding(.top, Theme.Space.m)
+
             ScrollView {
-                Text(text.isEmpty ? "—" : text)
+                Text(text.isEmpty ? "Your model's response will appear here." : text)
                     .font(.body)
+                    .foregroundStyle(text.isEmpty ? .secondary : .primary)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
+                    .padding(Theme.Space.l)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func slider(_ label: String, _ binding: Binding<Double>, _ range: ClosedRange<Double>) -> some View {
-        HStack(spacing: 6) {
-            Text(label).foregroundStyle(.secondary)
-            Slider(value: binding, in: range).frame(width: 110)
-            Text(binding.wrappedValue.formatted(.number.precision(.fractionLength(2))))
-                .monospacedDigit().frame(width: 36)
-        }
-        .font(.caption)
     }
 }
