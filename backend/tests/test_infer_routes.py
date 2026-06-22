@@ -13,7 +13,7 @@ TOKEN = "tok"
 def make_client(generate_fn):
     services = Services(
         auth=None, hub=None, downloads=None, cache=None, datasets=None,
-        training=None, inference=InferenceService(generate_fn=generate_fn),
+        training=None, inference=InferenceService(generate_fn=generate_fn), exports=None,
     )
     app = create_app(token=TOKEN, services=services)
     app.state.token = TOKEN

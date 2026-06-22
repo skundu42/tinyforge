@@ -23,3 +23,9 @@ def runs_dir() -> Path:
     path = app_data_dir() / "runs"
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def exports_dir() -> Path:
+    path = app_data_dir() / "exports"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
