@@ -31,3 +31,30 @@ class RunStatus(BaseModel):
     state: str  # pending | running | completed | failed | stopped
     error: str | None = None
     num_events: int = 0
+
+
+class RunRecord(BaseModel):
+    id: str
+    name: str
+    model_repo: str
+    dataset_id: str
+    state: str
+    created_at: str
+    adapter_path: str
+    config: dict
+
+
+class StartRunRequest(BaseModel):
+    name: str
+    model_repo: str
+    dataset_id: str
+    fine_tune_type: str = "lora"
+    num_layers: int = 16
+    batch_size: int = 1
+    iters: int = 100
+    learning_rate: float = 1e-5
+    steps_per_report: int = 10
+    steps_per_eval: int = 50
+    max_seq_length: int = 512
+    grad_checkpoint: bool = True
+    seed: int = 0

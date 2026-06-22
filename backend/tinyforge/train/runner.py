@@ -61,9 +61,9 @@ class TrainingRunner:
         self._runs: dict[str, _Run] = {}
         self._lock = threading.Lock()
 
-    def start(self, config: RunConfig) -> str:
+    def start(self, config: RunConfig, run_id: str | None = None) -> str:
         Path(config.adapter_path).mkdir(parents=True, exist_ok=True)
-        run = _Run(id=self._id_factory(), config=config)
+        run = _Run(id=run_id or self._id_factory(), config=config)
         with self._lock:
             self._runs[run.id] = run
         command = build_command(config, self._python)

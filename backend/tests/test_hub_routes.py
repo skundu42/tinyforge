@@ -74,7 +74,8 @@ class FakeAuth:
 @pytest.fixture
 def client_and_services():
     services = Services(
-        auth=FakeAuth(), hub=FakeHub(), downloads=FakeDownloads(), cache=FakeCache(), datasets=None
+        auth=FakeAuth(), hub=FakeHub(), downloads=FakeDownloads(), cache=FakeCache(),
+        datasets=None, training=None,
     )
     app = create_app(token=TOKEN, services=services)
     return TestClient(app), services

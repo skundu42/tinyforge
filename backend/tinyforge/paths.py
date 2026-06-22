@@ -17,3 +17,9 @@ def datasets_dir() -> Path:
     path = app_data_dir() / "datasets"
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def runs_dir() -> Path:
+    path = app_data_dir() / "runs"
+    path.mkdir(parents=True, exist_ok=True)
+    return path

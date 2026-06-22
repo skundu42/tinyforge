@@ -18,22 +18,36 @@ class Services:
     downloads: Any
     cache: Any
     datasets: Any
+    training: Any
 
 
 def build_services() -> Services:
+    import sys
+
     from tinyforge.datasets.registry import DatasetRegistry
     from tinyforge.datasets.service import DatasetService
     from tinyforge.hub.auth import AuthService
     from tinyforge.hub.cache import CacheService
     from tinyforge.hub.client import HubClient
     from tinyforge.hub.downloads import DownloadManager
-    from tinyforge.paths import datasets_dir
+    from tinyforge.paths import datasets_dir, runs_dir
+    from tinyforge.train.registry import RunRegistry
+    from tinyforge.train.runner import TrainingRunner
+    from tinyforge.train.service import TrainingService
 
     auth = AuthService()
+    datasets = DatasetService(DatasetRegistry(datasets_dir()))
+    training = TrainingService(
+        runner=TrainingRunner(python_exe=sys.executable),
+        registry=RunRegistry(runs_dir()),
+        runs_dir=runs_dir(),
+        dataset_resolver=lambda dataset_id: datasets.get(dataset_id).path,
+    )
     return Services(
         auth=auth,
         hub=HubClient(token_provider=auth.effective_token),
         downloads=DownloadManager(),
         cache=CacheService(),
-        datasets=DatasetService(DatasetRegistry(datasets_dir())),
+        datasets=datasets,
+        training=training,
     )
