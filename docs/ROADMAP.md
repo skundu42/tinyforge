@@ -9,8 +9,8 @@ finetuning product; M6 adds breadth; M7 is packaging/polish.
 | **M1** | HuggingFace Hub browse/download + cache + token auth | ✅ done |
 | **M2** | Dataset builder (import, format, tokenize preview, splits) | ✅ done |
 | **M3** | LLM LoRA finetuning (MLX) + live dashboards + experiment tracking | ✅ done |
-| M4 | Inference playground (base vs finetuned, streaming) | ⬜ next |
-| M5 | Exports (safetensors/LoRA, GGUF, Core ML, MLX) + push to Hub | ⬜ |
+| **M4** | Inference playground (base vs finetuned, streaming) | ✅ done |
+| M5 | Exports (safetensors/LoRA, GGUF, Core ML, MLX) + push to Hub | ⬜ next |
 | M6 | PyTorch/MPS engine: vision, audio, from-scratch, TRL methods | ⬜ |
 | M7 | Production hardening: notarized DMG, native MLX-Swift inference, auto-update | ⬜ |
 
@@ -97,6 +97,24 @@ MLX LoRA/QLoRA finetuning with live dashboards and experiment tracking.
   an adapter (≈2s).
 
 Backend: 96 pytest tests. App: 35 Swift Testing tests.
+
+## M4 — delivered
+
+An inference playground that streams generations, base vs finetuned.
+
+- **Backend** (`tinyforge/infer/`): `InferenceService` streams tokens via mlx_lm
+  (`load` with optional `adapter_path`, `stream_generate`, sampler from
+  temp/top-p, chat templating); single-model cache evicted on switch;
+  `/v1/infer` WebSocket runs the sync generator in a thread and streams
+  token/done/error.
+- **App** (`Features/Playground`): pick a cached model + an optional finetuned
+  adapter (a completed run), set sampling controls, and stream output —
+  side-by-side **Base vs Finetuned** when an adapter is selected.
+  `InferenceClient` drives the WebSocket.
+- **Verified e2e**: real client → backend → mlx_lm streaming generation over the
+  WebSocket from the cached model.
+
+Backend: 100 pytest tests. App: 39 Swift Testing tests.
 
 ## Conventions
 - TDD: tests first (see `backend/tests/`, `App/Tests/`).

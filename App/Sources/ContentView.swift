@@ -7,8 +7,10 @@ struct ContentView: View {
         switch backend.phase {
         case .healthy:
             if let api = backend.api, let progress = backend.progressClient,
-                let runEvents = backend.runEventClient {
-                MainShell(api: api, progress: progress, runEvents: runEvents, runtime: backend.runtime)
+                let runEvents = backend.runEventClient, let inference = backend.inferenceClient {
+                MainShell(
+                    api: api, progress: progress, runEvents: runEvents,
+                    inference: inference, runtime: backend.runtime)
             } else {
                 BackendStatusView()
             }

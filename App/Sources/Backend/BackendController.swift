@@ -19,6 +19,7 @@ final class BackendController {
     private(set) var api: APIClient?
     private(set) var progressClient: DownloadProgressClient?
     private(set) var runEventClient: RunEventClient?
+    private(set) var inferenceClient: InferenceClient?
 
     private let manager = BackendProcessManager()
     private let token = TokenGenerator.make()
@@ -44,6 +45,7 @@ final class BackendController {
             self.api = client
             self.progressClient = DownloadProgressClient(baseURL: base, token: token)
             self.runEventClient = RunEventClient(baseURL: base, token: token)
+            self.inferenceClient = InferenceClient(baseURL: base, token: token)
             let health = try await client.health()
             runtime = try? await client.runtime()
             phase = .healthy(health)

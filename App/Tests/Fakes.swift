@@ -139,6 +139,16 @@ struct FakeRunEventStreaming: RunEventStreaming {
     }
 }
 
+struct FakeInferenceStreaming: InferenceStreaming {
+    let events: [InferEvent]
+    func stream(_ request: GenRequest) -> AsyncStream<InferEvent> {
+        AsyncStream { continuation in
+            for event in events { continuation.yield(event) }
+            continuation.finish()
+        }
+    }
+}
+
 func trainEvent(
     _ type: String, iter: Int? = nil, trainLoss: Double? = nil, valLoss: Double? = nil,
     tokensPerSec: Double? = nil, peakMemGb: Double? = nil, lr: Double? = nil,
