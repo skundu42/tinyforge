@@ -1,0 +1,45 @@
+name: TinyForge
+options:
+  bundleIdPrefix: io.gnosis.tinyforge
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
+    # Ad-hoc sign for local build/run/test on Apple Silicon. Developer-ID
+    # signing + notarization is wired up in the packaging milestone (M7).
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    SWIFT_STRICT_CONCURRENCY: complete
+
+targets:
+  TinyForge:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: io.gnosis.tinyforge.app
+        PRODUCT_NAME: TinyForge
+        MARKETING_VERSION: "0.0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.developer-tools"
+        INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 Sandipan Kundu"
+
+  TinyForgeTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: TinyForge
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.gnosis.tinyforge.tests
+        GENERATE_INFOPLIST_FILE: YES

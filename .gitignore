@@ -1,0 +1,35 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+App/TinyForge.xcodeproj/
+*.moved-aside
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# uv
+# (uv.lock IS committed)
+
+# Bundled runtime / build artifacts
+backend/.python-runtime/
+dist/
+*.dmg
+*.app/
+
+# Local app data / secrets
+*.local
+.env
