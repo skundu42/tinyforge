@@ -24,6 +24,30 @@ PlanFn = Callable[[str, str], list[tuple[str, int, bool]]]
 DownloadFn = Callable[[str, str, Callable[[int], None]], str]
 
 
+def _friendly_download_error(exc: Exception) -> str:
+    """Translate a planning/transfer failure into an actionable message.
+
+    Planning runs synchronously in the request handler, so an uncaught failure
+    surfaces to the client as an opaque HTTP 500. The two most common causes —
+    a gated/private repo with no token, and a mistyped repo id — are worth
+    spelling out; everything else passes through verbatim.
+    """
+    class_names = {cls.__name__ for cls in type(exc).__mro__}
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    # Check gated before not-found: GatedRepoError subclasses RepositoryNotFoundError.
+    if "GatedRepoError" in class_names or status in (401, 403):
+        return (
+            "This model is gated. Request access on its Hugging Face page, then "
+            "sign in with a Hugging Face token in Settings to download it."
+        )
+    if "RepositoryNotFoundError" in class_names or status == 404:
+        return (
+            "Model not found on Hugging Face. Check the repository id — if it is "
+            "private, sign in with a Hugging Face token in Settings."
+        )
+    return str(exc)
+
+
 @dataclass
 class _Job:
     id: str
@@ -92,9 +116,22 @@ class DownloadManager:
         )
 
     def start(self, repo_id: str, repo_type: str = "model") -> str:
-        plan = self.plan(repo_id, repo_type)
+        job_id = self._id_factory()
+        try:
+            plan = self.plan(repo_id, repo_type)
+        except Exception as exc:  # noqa: BLE001 - recorded as an error job, not raised
+            # Planning happens in the request handler; surfacing the failure as an
+            # error job (rather than letting it escape as a bare HTTP 500) lets the
+            # client show why the download could not start.
+            job = _Job(
+                id=job_id, repo_id=repo_id, repo_type=repo_type,
+                total_bytes=0, state="error", error=_friendly_download_error(exc),
+            )
+            with self._lock:
+                self._jobs[job_id] = job
+            return job_id
         job = _Job(
-            id=self._id_factory(), repo_id=repo_id, repo_type=repo_type,
+            id=job_id, repo_id=repo_id, repo_type=repo_type,
             total_bytes=plan.total_bytes,
         )
         with self._lock:
@@ -116,7 +153,7 @@ class DownloadManager:
         except Exception as exc:  # noqa: BLE001 - surfaced to the client
             with self._lock:
                 job.state = "error"
-                job.error = str(exc)
+                job.error = _friendly_download_error(exc)
             return
 
         with self._lock:

@@ -122,6 +122,41 @@ def test_start_then_get_download_progress(client_and_services) -> None:
     assert progress.json()["fraction"] == 1.0
 
 
+def test_start_download_returns_friendly_error_for_gated_repo() -> None:
+    # Regression: a gated repo used to escape planning as a bare HTTP 500
+    # (surfaced in the app as "unexpectedStatus(500)"). The route must now
+    # respond 200 with an error-state job carrying an actionable message.
+    from huggingface_hub.errors import GatedRepoError
+
+    from tinyforge.hub.downloads import DownloadManager
+
+    class _Resp:
+        status_code = 401
+        headers: dict = {}
+        request = None
+
+    def plan_fn(repo_id, repo_type):
+        raise GatedRepoError("401 Client Error. Cannot access gated repo", response=_Resp())
+
+    services = Services(
+        auth=FakeAuth(), hub=FakeHub(),
+        downloads=DownloadManager(plan_fn=plan_fn, id_factory=lambda: "job1"),
+        cache=FakeCache(), datasets=None, training=None, inference=None, exports=None,
+    )
+    client = TestClient(create_app(token=TOKEN, services=services))
+
+    resp = client.post(
+        "/v1/hub/downloads",
+        json={"repo_id": "meta-llama/Llama-3.2-1B-Instruct"},
+        headers=headers(),
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["state"] == "error"
+    assert "gated" in body["error"].lower()
+
+
 def test_cache_info_and_delete(client_and_services) -> None:
     client, _ = client_and_services
     assert client.get("/v1/hub/cache", headers=headers()).json()["size_on_disk"] == 2000
