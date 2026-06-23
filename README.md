@@ -34,9 +34,9 @@ Everything runs locally. Your data never leaves your machine.
 
 - 🔍 **Model browser** — search HuggingFace, view files & READMEs, and download with a live progress bar (Xet-accelerated). See what you've already downloaded at a glance.
 - 🧱 **Dataset builder** — import HuggingFace datasets or local JSON/CSV/Parquet, preview rows, map columns into chat / instruction / completion formats, inspect token-length distributions, and split into train/validation.
-- ⚡ **Finetuning on the GPU** — LoRA / QLoRA / DoRA / full finetuning via **mlx-lm**, a from-scratch **PyTorch/MPS** engine, and a **vision** engine (ViT image classifier via HuggingFace Trainer) — all with **live dashboards** (loss, throughput, peak memory) and GPU/thermal telemetry.
+- ⚡ **Finetuning on the GPU** — LoRA / QLoRA / DoRA / full finetuning via **mlx-lm** and a **from-scratch tiny-LM** engine (a small Llama-style model trained on your own text) — all with **live dashboards** (loss, throughput, peak memory) and GPU/thermal telemetry.
 - ✨ **Inference playground** — stream generations with sampling controls, compare **base vs. finetuned** side by side, and optionally run **natively in Swift** via MLX-Swift (no Python round-trip).
-- 📦 **Export & share** — fuse adapters and export to **safetensors**, **MLX (quantized)**, **GGUF**, or **Core ML** (`.mlpackage`), and push straight to the Hub with an auto-generated model card.
+- 📦 **Export & share** — fuse adapters and export to **safetensors** and **MLX (quantized)**, and push straight to the Hub with an auto-generated model card.
 - 🗂️ **Experiment tracking** — every run, dataset, and export is recorded locally (SQLite) and browsable.
 - 📥 **Self-contained** — ships as a signed, notarizable `.app` with a bundled Python runtime. Nothing to install.
 
@@ -89,7 +89,7 @@ In a debug build, the app finds the dev Python environment automatically — no 
 |-------|-------|
 | **App** | SwiftUI · Swift 6.3 · Swift Charts · swift-subprocess · mlx-swift-lm · XcodeGen |
 | **Backend** | FastAPI · uvicorn · pydantic · uv |
-| **ML** | MLX · mlx-lm · PyTorch (MPS) · transformers · accelerate · datasets · coremltools |
+| **ML** | MLX · mlx-lm · PyTorch (MPS) · transformers · accelerate · datasets |
 | **Hub** | huggingface_hub (Xet) |
 | **Packaging** | python-build-standalone · codesign · notarytool |
 
@@ -109,7 +109,7 @@ In a debug build, the app finds the dev Python environment automatically — no 
 │       ├── api/          # FastAPI app + routers
 │       ├── hub/          # HuggingFace browse / download / cache / auth
 │       ├── datasets/     # load / format / tokenize / registry
-│       ├── train/        # mlx-lm & torch runners, orchestration, registry
+│       ├── train/        # mlx-lm & from-scratch LM runners, orchestration, registry
 │       ├── infer/        # streaming generation
 │       └── export/       # fuse / convert / push
 ├── scripts/              # bundle_python, sign, notarize, package_dmg, build_release
