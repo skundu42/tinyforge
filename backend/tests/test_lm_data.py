@@ -29,3 +29,17 @@ def test_load_corpus_reads_jsonl(tmp_path) -> None:
     train, val = load_corpus(str(tmp_path))
     assert train == ["a", "b"]
     assert val == ["c"]
+
+
+def test_packed_text_dataset_yields_tensors() -> None:
+    import torch
+
+    from tinyforge.train.lm_data import PackedTextDataset
+
+    ds = PackedTextDataset([[1, 2, 3]])
+    assert isinstance(ds, torch.utils.data.Dataset)
+    assert len(ds) == 1
+    item = ds[0]
+    assert item["input_ids"].tolist() == [1, 2, 3]
+    assert item["labels"].tolist() == [1, 2, 3]
+    assert item["input_ids"].dtype == torch.long

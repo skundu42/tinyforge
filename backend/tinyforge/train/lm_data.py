@@ -11,6 +11,8 @@ import json
 import os
 from typing import Any
 
+import torch
+
 
 def render_text(row: dict[str, Any]) -> str:
     """Render one prepared dataset row to a single training string."""
@@ -45,7 +47,7 @@ def pack_tokens(token_lists: list[list[int]], block_size: int, eos_id: int) -> l
     return [stream[i * block_size : (i + 1) * block_size] for i in range(n_blocks)]
 
 
-class PackedTextDataset:
+class PackedTextDataset(torch.utils.data.Dataset):
     """A torch Dataset of fixed-length blocks; labels == input_ids for causal LM."""
 
     def __init__(self, blocks: list[list[int]]) -> None:
@@ -55,7 +57,5 @@ class PackedTextDataset:
         return len(self._blocks)
 
     def __getitem__(self, i: int) -> dict:
-        import torch
-
         ids = torch.tensor(self._blocks[i], dtype=torch.long)
         return {"input_ids": ids, "labels": ids.clone()}
