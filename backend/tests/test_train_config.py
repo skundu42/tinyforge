@@ -38,21 +38,23 @@ def test_grad_checkpoint_flag_toggles() -> None:
     assert "--grad-checkpoint" not in build_command(base_config(grad_checkpoint=False), "py")
 
 
-def test_build_command_torch_engine_uses_torch_worker() -> None:
-    cmd = build_command(base_config(engine="torch", iters=50, learning_rate=1e-3, batch_size=32), "py")
-    assert cmd[:3] == ["py", "-m", "tinyforge.train.torch_worker"]
+def test_build_command_lm_engine_uses_lm_worker() -> None:
+    cmd = build_command(
+        base_config(
+            engine="lm", iters=50, learning_rate=1e-3, batch_size=8,
+            num_layers=4, hidden_size=128, num_heads=4, vocab_size=500, context_length=256,
+        ),
+        "py",
+    )
+    assert cmd[:3] == ["py", "-m", "tinyforge.train.lm_worker"]
     joined = " ".join(cmd)
-    assert "--iters 50" in joined
+    assert "--data /data/ds1" in joined
     assert "--adapter-path /runs/r1" in joined
-    assert "--batch-size 32" in joined
-    # torch from-scratch path doesn't reference an LLM model/dataset
+    assert "--iters 50" in joined
+    assert "--batch-size 8" in joined
+    assert "--hidden-size 128" in joined
+    assert "--num-layers 4" in joined
+    assert "--num-heads 4" in joined
+    assert "--vocab-size 500" in joined
+    assert "--context-length 256" in joined
     assert "mlx_lm" not in joined
-
-
-def test_build_command_vision_engine_uses_vision_worker() -> None:
-    cmd = build_command(base_config(engine="vision", iters=30, batch_size=16), "py")
-    assert cmd[:3] == ["py", "-m", "tinyforge.train.vision_worker"]
-    joined = " ".join(cmd)
-    assert "--iters 30" in joined
-    assert "--batch-size 16" in joined
-    assert "--hidden" not in joined  # vision worker takes no MLP hidden size
