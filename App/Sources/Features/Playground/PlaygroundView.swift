@@ -26,6 +26,21 @@ struct PlaygroundView: View {
                             Text("Select…").tag("")
                             ForEach(model.cachedModels) { Text($0.repoId).tag($0.repoId) }
                         }
+                        if !model.scratchRuns.isEmpty {
+                            Picker("From-scratch model", selection: Binding(
+                                get: { model.modelRepo },
+                                set: { id in
+                                    if let run = model.scratchRuns.first(where: { $0.adapterPath == id }) {
+                                        model.selectScratchModel(run)
+                                    } else {
+                                        model.modelRepo = id
+                                    }
+                                })
+                            ) {
+                                Text("Downloaded base model").tag(model.modelRepo)
+                                ForEach(model.scratchRuns) { Text($0.name).tag($0.adapterPath) }
+                            }
+                        }
                         Picker("Adapter", selection: $model.adapterRunId) {
                             Text("None (base only)").tag("")
                             ForEach(model.runs) { Text($0.name).tag($0.id) }

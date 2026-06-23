@@ -64,4 +64,31 @@ struct PlaygroundModelTests {
         #expect(sut.cachedModels.isEmpty)
         #expect(sut.runs.isEmpty)
     }
+
+    @Test func scratchRunsListsOnlyLmEngineRuns() async {
+        let api = FakeBackendAPI()
+        api.runs = [
+            runRecord(id: "a", state: "completed", engine: "lm", adapterPath: "/runs/a"),
+            runRecord(id: "b", state: "completed", engine: "mlx", adapterPath: "/runs/b"),
+        ]
+        let sut = PlaygroundModel(api: api, infer: FakeInferenceStreaming(events: []))
+        await sut.loadInputs()
+        #expect(sut.scratchRuns.map(\.id) == ["a"])
+    }
+
+    @Test func selectScratchModelPointsModelRepoAtRunDir() {
+        let sut = PlaygroundModel(api: FakeBackendAPI(), infer: FakeInferenceStreaming(events: []))
+        let run = runRecord(id: "a", state: "completed", engine: "lm", adapterPath: "/runs/a")
+        sut.selectScratchModel(run)
+        #expect(sut.modelRepo == "/runs/a")
+        #expect(sut.adapterRunId == "")
+    }
+}
+
+private func runRecord(
+    id: String, name: String = "run", modelRepo: String = "m", datasetId: String = "d",
+    state: String, engine: String = "mlx", createdAt: String = "t", adapterPath: String
+) -> RunRecord {
+    RunRecord(id: id, name: name, modelRepo: modelRepo, datasetId: datasetId,
+              state: state, engine: engine, createdAt: createdAt, adapterPath: adapterPath)
 }

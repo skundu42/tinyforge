@@ -40,6 +40,12 @@ final class PlaygroundModel: LoadErrorReporting {
     // Native runs base-only; the side-by-side comparison uses the backend path.
     var showsComparison: Bool { hasAdapter && !runNative }
     var selectedRun: RunRecord? { runs.first { $0.id == adapterRunId } }
+    var scratchRuns: [RunRecord] { runs.filter { $0.engine == "lm" } }
+
+    func selectScratchModel(_ run: RunRecord) {
+        modelRepo = run.adapterPath  // the run dir IS a loadable HF model
+        adapterRunId = ""            // from-scratch model: no adapter overlay
+    }
 
     func loadInputs() async {
         let repos = (await attempt("Load models") { try await api.cacheInfo() })?.repos ?? []

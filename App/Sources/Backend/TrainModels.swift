@@ -47,15 +47,34 @@ struct RunRecord: Codable, Sendable, Identifiable, Equatable {
     let modelRepo: String
     let datasetId: String
     let state: String
+    let engine: String
     let createdAt: String
     let adapterPath: String
 
     enum CodingKeys: String, CodingKey {
-        case id, name, state
+        case id, name, state, engine
         case modelRepo = "model_repo"
         case datasetId = "dataset_id"
         case createdAt = "created_at"
         case adapterPath = "adapter_path"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        modelRepo = try c.decode(String.self, forKey: .modelRepo)
+        datasetId = try c.decode(String.self, forKey: .datasetId)
+        state = try c.decode(String.self, forKey: .state)
+        engine = try c.decodeIfPresent(String.self, forKey: .engine) ?? "mlx"
+        createdAt = try c.decode(String.self, forKey: .createdAt)
+        adapterPath = try c.decode(String.self, forKey: .adapterPath)
+    }
+
+    init(id: String, name: String, modelRepo: String, datasetId: String, state: String,
+         engine: String = "mlx", createdAt: String, adapterPath: String) {
+        self.id = id; self.name = name; self.modelRepo = modelRepo; self.datasetId = datasetId
+        self.state = state; self.engine = engine; self.createdAt = createdAt; self.adapterPath = adapterPath
     }
 }
 
