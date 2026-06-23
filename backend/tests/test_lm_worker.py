@@ -1,4 +1,11 @@
+import json
+from pathlib import Path
+
+import pytest
+
 from tinyforge.train.lm_worker import build_llama_config
+
+_E2E = Path(__file__).resolve().parents[2] / ".run-network-tests"
 
 
 def test_build_llama_config_maps_knobs() -> None:
@@ -7,19 +14,12 @@ def test_build_llama_config_maps_knobs() -> None:
     )
     assert cfg.vocab_size == 512
     assert cfg.hidden_size == 128
+    assert cfg.intermediate_size == 128 * 4
     assert cfg.num_hidden_layers == 4
     assert cfg.num_attention_heads == 4
     assert cfg.num_key_value_heads == 4
     assert cfg.max_position_embeddings == 256
     assert cfg.tie_word_embeddings is True
-
-
-import json
-from pathlib import Path
-
-import pytest
-
-_E2E = Path(__file__).resolve().parents[2] / ".run-network-tests"
 
 
 @pytest.mark.skipif(not _E2E.exists(), reason="opt-in: touch .run-network-tests")

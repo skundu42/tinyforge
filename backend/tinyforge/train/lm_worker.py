@@ -12,6 +12,10 @@ from __future__ import annotations
 import argparse
 import os
 import time
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from transformers import LlamaConfig
 
 from tinyforge.train.lm_data import PackedTextDataset, load_corpus, pack_tokens
 from tinyforge.train.tokenizer import train_bpe
@@ -25,7 +29,7 @@ def _device() -> str:
 
 def build_llama_config(
     vocab_size: int, hidden_size: int, num_layers: int, num_heads: int, context_length: int
-):
+) -> "LlamaConfig":
     from transformers import LlamaConfig
 
     return LlamaConfig(
@@ -84,6 +88,8 @@ def main(argv: list[str] | None = None) -> None:
     tokenizer = train_bpe(train_texts, vocab_size=args.vocab_size)
     train_ds = _pack_dataset(train_texts, tokenizer, args.context_length)
     val_ds = _pack_dataset(val_texts, tokenizer, args.context_length) if val_texts else None
+    if val_ds is not None and len(val_ds) == 0:
+        val_ds = None
     if len(train_ds) == 0:
         raise SystemExit(
             f"Corpus too small to fill one {args.context_length}-token block; add more data."
