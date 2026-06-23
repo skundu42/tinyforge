@@ -50,9 +50,9 @@ def build_services() -> Services:
         dataset_resolver=lambda dataset_id: datasets.get(dataset_id).path,
     )
 
-    def resolve_run(run_id: str) -> tuple[str, str]:
+    def resolve_run(run_id: str) -> tuple[str, str, str]:
         record = training.get(run_id)
-        return record.config["model_repo"], record.adapter_path
+        return record.config["model_repo"], record.adapter_path, record.config.get("engine", "mlx")
 
     exports = ExportManager(
         python_exe=sys.executable, exports_dir=exports_dir(),

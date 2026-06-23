@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 class ExportRequest(BaseModel):
     run_id: str
-    target: Literal["safetensors", "mlx", "gguf", "coreml"] = "safetensors"
+    target: Literal["safetensors", "mlx"] = "safetensors"
     q_bits: int = 4
     push_repo: str | None = None  # if set, push the result to this HF repo
 

@@ -1,5 +1,9 @@
 """Export manager: fuse a LoRA adapter into its base, optionally convert to
-MLX-quantized or GGUF, and optionally push the result to the Hub.
+MLX-quantized, and optionally push the result to the Hub.
+
+For full from-scratch models (engine == "lm"), no fuse is needed — the run
+output dir IS the complete HF model. For LoRA adapter runs (engine == "mlx"),
+the existing fuse-then-optional-convert path is used.
 
 Each export runs as a background job. The command runner, pusher, and run
 resolver are injectable so the job lifecycle is testable without mlx or network.
@@ -18,8 +22,8 @@ from tinyforge.export.models import ExportRequest, ExportStatus
 
 # run_command(cmd, cwd) -> (exit_code, combined_output)
 RunCommandFn = Callable[[list[str], str], tuple[int, str]]
-# run_resolver(run_id) -> (base_model_repo, adapter_path)
-RunResolver = Callable[[str], tuple[str, str]]
+# run_resolver(run_id) -> (model_repo, adapter_path, engine)
+RunResolver = Callable[[str], tuple[str, str, str]]
 # push_fn(local_path, repo_id, base_model) -> hub url
 PushFn = Callable[[str, str, str], str]
 
@@ -29,16 +33,6 @@ def _default_run_command(cmd: list[str], cwd: str) -> tuple[int, str]:
 
     result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     return result.returncode, (result.stdout + result.stderr)
-
-
-def _default_coreml(run_path: str, out_path: str) -> str:
-    from tinyforge.export.coreml import convert_run_to_coreml
-
-    return convert_run_to_coreml(run_path, out_path)
-
-
-# coreml_fn(run_path, out_path) -> path to the produced .mlpackage
-CoreMLFn = Callable[[str, str], str]
 
 
 @dataclass
@@ -60,7 +54,6 @@ class ExportManager:
         run_resolver: RunResolver,
         run_command: RunCommandFn = _default_run_command,
         push_fn: PushFn | None = None,
-        coreml_fn: CoreMLFn = _default_coreml,
         id_factory: Callable[[], str] = lambda: uuid.uuid4().hex,
     ) -> None:
         self._python = python_exe
@@ -68,7 +61,6 @@ class ExportManager:
         self._resolve_run = run_resolver
         self._run_command = run_command
         self._push_fn = push_fn
-        self._coreml_fn = coreml_fn
         self._id_factory = id_factory
         self._jobs: dict[str, _Export] = {}
         self._lock = threading.Lock()
@@ -81,49 +73,53 @@ class ExportManager:
         return job.id
 
     def _run(self, job: _Export) -> None:
+        import shutil
+
         request = job.request
-        base_repo, adapter_path = self._resolve_run(request.run_id)
+        model_repo, adapter_path, engine = self._resolve_run(request.run_id)
         out_dir = self._exports_dir / job.id
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        # Core ML converts the run's saved (traceable) model directly — no fuse.
-        if request.target == "coreml":
-            try:
-                path = self._coreml_fn(adapter_path, str(out_dir / "Model.mlpackage"))
-            except Exception as exc:  # noqa: BLE001
-                return self._fail(job, f"Core ML conversion failed: {exc}")
-            with self._lock:
-                job.output_path = path
-                job.state = "completed"
-            return
-
-        fused = out_dir / "fused"
-        gguf = out_dir / "model.gguf" if request.target == "gguf" else None
-
-        code, output = self._run_command(
-            build_fuse_command(self._python, base_repo, adapter_path, str(fused),
-                               str(gguf) if gguf else None),
-            str(out_dir),
-        )
-        if code != 0:
-            return self._fail(job, output)
-
-        result_path = str(gguf) if gguf else str(fused)
-        if request.target == "mlx":
-            mlx_path = out_dir / "mlx"
+        if engine == "lm":
+            # Full from-scratch model: the run dir IS the model — no fuse.
+            if request.target == "safetensors":
+                dest = out_dir / "model"
+                shutil.copytree(model_repo, dest, dirs_exist_ok=True)
+                result_path = str(dest)
+            else:  # mlx
+                mlx_path = out_dir / "mlx"
+                code, output = self._run_command(
+                    build_convert_command(self._python, model_repo, str(mlx_path), request.q_bits),
+                    str(out_dir),
+                )
+                if code != 0:
+                    return self._fail(job, output)
+                result_path = str(mlx_path)
+        else:
+            # LoRA adapter on a base repo: fuse, then optionally convert.
+            fused = out_dir / "fused"
             code, output = self._run_command(
-                build_convert_command(self._python, str(fused), str(mlx_path), request.q_bits),
+                build_fuse_command(self._python, model_repo, adapter_path, str(fused)),
                 str(out_dir),
             )
             if code != 0:
                 return self._fail(job, output)
-            result_path = str(mlx_path)
+            result_path = str(fused)
+            if request.target == "mlx":
+                mlx_path = out_dir / "mlx"
+                code, output = self._run_command(
+                    build_convert_command(self._python, str(fused), str(mlx_path), request.q_bits),
+                    str(out_dir),
+                )
+                if code != 0:
+                    return self._fail(job, output)
+                result_path = str(mlx_path)
 
         if request.push_repo:
             if self._push_fn is None:
                 return self._fail(job, "push requested but no pusher configured")
             try:
-                url = self._push_fn(result_path, request.push_repo, base_repo)
+                url = self._push_fn(result_path, request.push_repo, model_repo)
             except Exception as exc:  # noqa: BLE001
                 return self._fail(job, f"push failed: {exc}")
             with self._lock:
