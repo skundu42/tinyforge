@@ -47,6 +47,24 @@ jobs:
           echo "version=${REF#v}" >> "$GITHUB_OUTPUT"
           echo "Building $REF (version ${REF#v})"
 
+      # Guardrail: the in-repo version must match the tag, so a release can never
+      # ship out of sync. Bump with scripts/release.sh, which keeps them aligned.
+      # Skipped for workflow_dispatch dry runs (the checked-out tree may differ).
+      - name: Verify in-repo version matches tag
+        if: github.event_name == 'push'
+        run: |
+          want="${{ steps.version.outputs.version }}"
+          py=$(sed -n -E 's/^version = "(.*)"/\1/p' backend/pyproject.toml | head -1)
+          mv=$(sed -n -E 's/.*MARKETING_VERSION: "(.*)"/\1/p' App/project.yml | head -1)
+          echo "tag=$want  pyproject=$py  project.yml=$mv"
+          rc=0
+          [ "$py" = "$want" ] || { echo "::error::backend/pyproject.toml version '$py' != tag '$want'"; rc=1; }
+          [ "$mv" = "$want" ] || { echo "::error::App/project.yml MARKETING_VERSION '$mv' != tag '$want'"; rc=1; }
+          if [ "$rc" -ne 0 ]; then
+            echo "Use scripts/release.sh $want to bump + tag in sync, then retry." >&2
+            exit 1
+          fi
+
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
