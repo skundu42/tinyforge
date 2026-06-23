@@ -1,6 +1,6 @@
 [project]
 name = "tinyforge"
-version = "0.1.2"
+version = "0.2.0"
 description = "TinyForge ML backend — FastAPI orchestrator for training/finetuning tiny models on Apple Silicon"
 readme = "../README.md"
 requires-python = ">=3.12"
