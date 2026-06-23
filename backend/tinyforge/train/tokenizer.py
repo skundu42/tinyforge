@@ -8,11 +8,15 @@ Produces a `PreTrainedTokenizerFast` that `save_pretrained`s into a standard
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerFast
 
 EOS = "<|endoftext|>"
 
 
-def train_bpe(texts: Iterable[str], vocab_size: int):
+def train_bpe(texts: Iterable[str], vocab_size: int) -> "PreTrainedTokenizerFast":
     from tokenizers import Tokenizer, decoders, models, pre_tokenizers, trainers
     from transformers import PreTrainedTokenizerFast
 
