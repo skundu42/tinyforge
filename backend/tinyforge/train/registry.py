@@ -42,7 +42,7 @@ class RunRegistry:
         with self._connect() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO runs VALUES (:id,:name,:model_repo,:dataset_id,:state,:created_at,:adapter_path,:config)",
-                {**record.model_dump(exclude={"config"}), "config": json.dumps(record.config)},
+                {**record.model_dump(exclude={"config", "engine"}), "config": json.dumps(record.config)},
             )
 
     def update_state(self, run_id: str, state: str, error: str | None = None) -> None:
@@ -65,4 +65,5 @@ class RunRegistry:
     def _to_record(row: sqlite3.Row) -> RunRecord:
         data = dict(row)
         data["config"] = json.loads(data["config"])
+        data["engine"] = data["config"].get("engine", "mlx")
         return RunRecord(**data)

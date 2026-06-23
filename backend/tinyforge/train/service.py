@@ -14,7 +14,7 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
-from tinyforge.train.models import RunConfig, RunRecord, RunStatus, StartRunRequest
+from tinyforge.train.models import RunConfig, RunRecord, RunStatus, StartRunRequest, apply_preset
 from tinyforge.train.registry import RunRegistry
 from tinyforge.train.runner import TrainingRunner
 
@@ -43,24 +43,28 @@ class TrainingService:
 
     def start(self, request: StartRunRequest) -> RunRecord:
         run_id = self._id_factory()
-        # Only the MLX LLM engine needs a model/dataset; torch & vision are self-contained.
-        data_dir = self._resolve_dataset(request.dataset_id) if request.engine == "mlx" else "(none)"
-        default_names = {"torch": "(from-scratch MLP)", "vision": "(ViT image classifier)"}
-        model_repo = request.model_repo or default_names.get(request.engine, "")
+        data_dir = self._resolve_dataset(request.dataset_id)
         adapter_path = str(self._runs_dir / run_id)
+        # A from-scratch LM has no base repo; its model lives in the run's own dir.
+        model_repo = adapter_path if request.engine == "lm" else request.model_repo
+        num_layers, hidden_size, num_heads, context_length = apply_preset(
+            request.model_size, request.num_layers, request.hidden_size,
+            request.num_heads, request.context_length,
+        )
         config = RunConfig(
             name=request.name, model_repo=model_repo, data_dir=data_dir,
             adapter_path=adapter_path, engine=request.engine,
             fine_tune_type=request.fine_tune_type,
-            num_layers=request.num_layers, batch_size=request.batch_size,
+            num_layers=num_layers, batch_size=request.batch_size,
             iters=request.iters, learning_rate=request.learning_rate,
             steps_per_report=request.steps_per_report, steps_per_eval=request.steps_per_eval,
             max_seq_length=request.max_seq_length, grad_checkpoint=request.grad_checkpoint,
-            seed=request.seed,
+            seed=request.seed, model_size=request.model_size, hidden_size=hidden_size,
+            num_heads=num_heads, vocab_size=request.vocab_size, context_length=context_length,
         )
         self._runner.start(config, run_id=run_id)
         record = RunRecord(
-            id=run_id, name=request.name, model_repo=model_repo,
+            id=run_id, name=request.name, engine=request.engine, model_repo=model_repo,
             dataset_id=request.dataset_id, state="running", created_at=self._clock(),
             adapter_path=adapter_path, config=config.model_dump(),
         )

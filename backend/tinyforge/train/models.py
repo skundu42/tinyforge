@@ -62,6 +62,7 @@ class RunRecord(BaseModel):
     model_repo: str
     dataset_id: str
     state: str
+    engine: str = "mlx"
     created_at: str
     adapter_path: str
     config: dict

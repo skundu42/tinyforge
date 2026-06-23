@@ -86,3 +86,28 @@ def test_events_delegates_to_runner(tmp_path) -> None:
     svc, _, _ = service(tmp_path)
     svc.start(request())
     assert svc.events("run1") == [{"event": "train", "iter": 1}]
+
+
+def test_lm_run_resolves_dataset_and_points_model_at_output_dir(tmp_path) -> None:
+    svc, runner, registry = service(tmp_path)
+
+    record = svc.start(request(engine="lm", model_size="tiny", dataset_id="dsX"))
+
+    cfg = runner.started["config"]
+    assert cfg.engine == "lm"
+    assert cfg.data_dir == "/data/dsX"
+    # from-scratch model lives in its own run dir, so model_repo == adapter_path
+    assert cfg.model_repo == cfg.adapter_path
+    # tiny preset applied
+    assert (cfg.num_layers, cfg.hidden_size, cfg.num_heads, cfg.context_length) == (4, 128, 4, 256)
+    assert record.engine == "lm"
+
+
+def test_lm_custom_size_passes_knobs_through(tmp_path) -> None:
+    svc, runner, _ = service(tmp_path)
+    svc.start(request(
+        engine="lm", model_size="custom", num_layers=3, hidden_size=192, num_heads=6,
+        context_length=128,
+    ))
+    cfg = runner.started["config"]
+    assert (cfg.num_layers, cfg.hidden_size, cfg.num_heads, cfg.context_length) == (3, 192, 6, 128)

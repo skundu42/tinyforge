@@ -36,3 +36,16 @@ def test_update_state(tmp_path) -> None:
 def test_persists_across_instances(tmp_path) -> None:
     RunRegistry(tmp_path).save(record())
     assert RunRegistry(tmp_path).get("r1").state == "running"
+
+
+def test_engine_is_derived_from_config(tmp_path) -> None:
+    from tinyforge.train.models import RunConfig, RunRecord
+    from tinyforge.train.registry import RunRegistry
+
+    reg = RunRegistry(tmp_path)
+    cfg = RunConfig(name="r", model_repo="/runs/r", data_dir="/d", adapter_path="/runs/r", engine="lm")
+    reg.save(RunRecord(
+        id="r", name="r", engine="lm", model_repo="/runs/r", dataset_id="d",
+        state="completed", created_at="t", adapter_path="/runs/r", config=cfg.model_dump(),
+    ))
+    assert reg.get("r").engine == "lm"
