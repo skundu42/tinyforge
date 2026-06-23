@@ -95,11 +95,13 @@ struct TrainingView: View {
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                     GridRow {
                         stepper("Iterations", $model.iters, 1...5000, step: 10)
-                        stepper("LoRA layers", $model.numLayers, 1...48)
-                    }
-                    GridRow {
                         stepper("Batch size", $model.batchSize, 1...16)
-                        stepper("Max seq length", $model.maxSeqLength, 64...4096, step: 64)
+                    }
+                    if model.isLLM {
+                        GridRow {
+                            stepper("LoRA layers", $model.numLayers, 1...48)
+                            stepper("Max seq length", $model.maxSeqLength, 64...4096, step: 64)
+                        }
                     }
                 }
 
