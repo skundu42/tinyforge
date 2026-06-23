@@ -84,7 +84,10 @@ class ExportManager:
             # Full from-scratch model: the run dir IS the model — no fuse.
             if request.target == "safetensors":
                 dest = out_dir / "model"
-                shutil.copytree(model_repo, dest, dirs_exist_ok=True)
+                try:
+                    shutil.copytree(model_repo, dest, dirs_exist_ok=True)
+                except OSError as exc:
+                    return self._fail(job, f"copy failed: {exc}")
                 result_path = str(dest)
             else:  # mlx
                 mlx_path = out_dir / "mlx"

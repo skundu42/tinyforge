@@ -1,6 +1,7 @@
 """Tests for ExportManager: LoRA-adapter fuse/convert vs full-model (lm) export."""
 
 import time
+from pathlib import Path
 
 from tinyforge.export.manager import ExportManager
 from tinyforge.export.models import ExportRequest
@@ -55,7 +56,6 @@ def test_adapter_mlx_runs_fuse_then_convert(tmp_path) -> None:
 # --- Full-model (lm) runs: no fuse -------------------------------------------
 
 def test_lm_safetensors_copies_run_dir_no_fuse(tmp_path) -> None:
-    (tmp_path).joinpath("dummy").write_text("x")  # ensure tmp exists
     run_dir = tmp_path / "runs" / "r1"
     run_dir.mkdir(parents=True)
     (run_dir / "model.safetensors").write_text("weights")
@@ -66,6 +66,7 @@ def test_lm_safetensors_copies_run_dir_no_fuse(tmp_path) -> None:
     assert log == []  # no fuse, no subprocess
     out = mgr.status(job_id).output_path
     assert out.endswith("model")
+    assert Path(out, "model.safetensors").exists()
 
 
 def test_lm_mlx_converts_run_dir_directly(tmp_path) -> None:
@@ -98,3 +99,10 @@ def test_push_invoked_when_repo_set(tmp_path) -> None:
     assert _wait(lambda: mgr.status(job_id).state == "completed")
     assert pushes == [("me/m", "base/m")]
     assert mgr.status(job_id).hub_url == "https://hf.co/me/m"
+
+
+def test_lm_safetensors_missing_run_dir_fails(tmp_path) -> None:
+    mgr = manager(tmp_path, run_command=lambda cmd, cwd: (0, ""), engine="lm")
+    job_id = mgr.start(ExportRequest(run_id="missing", target="safetensors"))
+    assert _wait(lambda: mgr.status(job_id).state == "failed")
+    assert "copy failed" in mgr.status(job_id).error
