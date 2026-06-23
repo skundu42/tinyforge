@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hmac
 import threading
 
@@ -31,14 +32,23 @@ async def infer_ws(websocket: WebSocket) -> None:
 
     queue: asyncio.Queue = asyncio.Queue()
     loop = asyncio.get_event_loop()
+    # Set when the client goes away (or we finish): tells the producer thread to
+    # stop generating so a closed Playground doesn't keep the GPU busy.
+    cancel = threading.Event()
+
+    def post(item: tuple) -> None:
+        # The handler may have already returned (loop closed); dropping the item
+        # is fine since nothing is listening.
+        with contextlib.suppress(RuntimeError):
+            loop.call_soon_threadsafe(queue.put_nowait, item)
 
     def produce() -> None:
         try:
-            for delta in service.stream(request):
-                loop.call_soon_threadsafe(queue.put_nowait, ("token", delta))
+            for delta in service.stream(request, should_cancel=cancel.is_set):
+                post(("token", delta))
         except Exception as exc:  # noqa: BLE001
-            loop.call_soon_threadsafe(queue.put_nowait, ("error", str(exc)))
-        loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
+            post(("error", str(exc)))
+        post(("done", None))
 
     threading.Thread(target=produce, daemon=True).start()
 
@@ -53,6 +63,9 @@ async def infer_ws(websocket: WebSocket) -> None:
             else:
                 await websocket.send_json({"event": "done"})
                 break
-    except WebSocketDisconnect:
-        return
-    await websocket.close()
+    except Exception:  # noqa: BLE001 - client disconnected / send failed; stop generating
+        pass
+    finally:
+        cancel.set()
+    with contextlib.suppress(Exception):
+        await websocket.close()

@@ -11,12 +11,14 @@ resolver are injectable so the job lifecycle is testable without mlx or network.
 
 from __future__ import annotations
 
+import subprocess
 import threading
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from tinyforge.children import child_registry
 from tinyforge.export.commands import build_convert_command, build_fuse_command
 from tinyforge.export.models import ExportRequest, ExportStatus
 
@@ -28,11 +30,19 @@ RunResolver = Callable[[str], tuple[str, str, str]]
 PushFn = Callable[[str, str, str], str]
 
 
-def _default_run_command(cmd: list[str], cwd: str) -> tuple[int, str]:
-    import subprocess
-
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
-    return result.returncode, (result.stdout + result.stderr)
+def _default_run_command(cmd: list[str], cwd: str, registry: object = None) -> tuple[int, str]:
+    registry = child_registry if registry is None else registry
+    proc = subprocess.Popen(
+        cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        # Own session/process-group so the backend can reap it on death.
+        start_new_session=True,
+    )
+    registry.register(proc.pid)
+    try:
+        output, _ = proc.communicate()
+        return proc.returncode, output or ""
+    finally:
+        registry.unregister(proc.pid)
 
 
 @dataclass

@@ -34,6 +34,8 @@ def _default_spawn(command: list[str], cwd: str) -> Any:
     return subprocess.Popen(
         command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True, bufsize=1,
+        # Own session/process-group so the backend can reap the whole tree on death.
+        start_new_session=True,
     )
 
 
@@ -54,12 +56,18 @@ class TrainingRunner:
         python_exe: str,
         spawn: SpawnFn = _default_spawn,
         id_factory: Callable[[], str] = lambda: uuid.uuid4().hex,
+        child_registry: Any = None,
     ) -> None:
         self._python = python_exe
         self._spawn = spawn
         self._id_factory = id_factory
         self._runs: dict[str, _Run] = {}
         self._lock = threading.Lock()
+        if child_registry is None:
+            from tinyforge.children import child_registry as _registry
+
+            child_registry = _registry
+        self._children = child_registry
 
     def start(self, config: RunConfig, run_id: str | None = None) -> str:
         Path(config.adapter_path).mkdir(parents=True, exist_ok=True)
@@ -75,21 +83,28 @@ class TrainingRunner:
         try:
             proc = self._spawn(command, run.config.adapter_path)
             run.proc = proc
-            with open(events_path, "w", encoding="utf-8") as events_file:
-                for line in proc.stdout:
-                    event = parse_line(line)
-                    if event is None:
-                        continue
-                    with self._lock:
-                        run.events.append(event)
-                    events_file.write(json.dumps(event) + "\n")
-                    events_file.flush()
-            code = proc.wait()
-            with self._lock:
-                if run.state != "stopped":
-                    run.state = "completed" if code == 0 else "failed"
-                    if code != 0 and run.error is None:
-                        run.error = f"exited with code {code}"
+            pid = getattr(proc, "pid", None)
+            if pid is not None:
+                self._children.register(pid)
+            try:
+                with open(events_path, "w", encoding="utf-8") as events_file:
+                    for line in proc.stdout:
+                        event = parse_line(line)
+                        if event is None:
+                            continue
+                        with self._lock:
+                            run.events.append(event)
+                        events_file.write(json.dumps(event) + "\n")
+                        events_file.flush()
+                code = proc.wait()
+                with self._lock:
+                    if run.state != "stopped":
+                        run.state = "completed" if code == 0 else "failed"
+                        if code != 0 and run.error is None:
+                            run.error = f"exited with code {code}"
+            finally:
+                if pid is not None:
+                    self._children.unregister(pid)
         except Exception as exc:  # noqa: BLE001
             with self._lock:
                 run.state = "failed"

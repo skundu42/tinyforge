@@ -48,6 +48,7 @@ final class TrainingModel: LoadErrorReporting {
 
     private let api: any BackendAPI
     private let events: any RunEventStreaming
+    private var streamTask: Task<Void, Never>?
 
     init(api: any BackendAPI, events: any RunEventStreaming) {
         self.api = api
@@ -73,6 +74,19 @@ final class TrainingModel: LoadErrorReporting {
         runs = await attempt("Load runs") { try await api.listRuns() } ?? []
     }
 
+    /// Starts a run and streams its events as a cancellable task. Leaving the
+    /// screen calls `cancelStreaming()` to close the event socket *without*
+    /// stopping the run; `stop()` is the explicit "halt the run" action.
+    func startTraining() {
+        streamTask?.cancel()
+        streamTask = Task { [weak self] in await self?.start() }
+    }
+
+    func cancelStreaming() {
+        streamTask?.cancel()
+        streamTask = nil
+    }
+
     func start() async {
         resetMetrics()
         let request = StartRunRequest(
@@ -93,7 +107,7 @@ final class TrainingModel: LoadErrorReporting {
             }
         } catch {
             runState = "failed"
-            runError = String(describing: error)
+            runError = error.localizedDescription
         }
         await loadRuns()
     }
@@ -125,6 +139,8 @@ final class TrainingModel: LoadErrorReporting {
     func stop() async {
         guard let id = activeRunId else { return }
         await attempt("Stop run") { try await api.stopRun(id: id) }
+        streamTask?.cancel()
+        streamTask = nil
         runState = "stopped"
     }
 

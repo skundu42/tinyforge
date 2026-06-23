@@ -20,6 +20,7 @@ struct TrainingView: View {
         }
         .navigationTitle("Finetune")
         .task { await model.loadInputs() }
+        .onDisappear { model.cancelStreaming() }
     }
 
     private var configSection: some View {
@@ -39,7 +40,13 @@ struct TrainingView: View {
                     } else {
                         Picker("Base model", selection: $model.modelRepo) {
                             Text("Select…").tag("")
-                            ForEach(model.cachedModels) { Text($0.repoId).tag($0.repoId) }
+                            ForEach(model.cachedModels) { repo in
+                                Text(repo.pickerLabel).tag(repo.repoId)
+                            }
+                        }
+                        if let selected = model.cachedModels.first(where: { $0.repoId == model.modelRepo }),
+                           selected.isTooBigForSystem {
+                            TooBigTag()
                         }
                     }
 
@@ -117,7 +124,7 @@ struct TrainingView: View {
                             Label("Stop", systemImage: "stop.fill")
                         }
                     } else {
-                        Button { Task { await model.start() } } label: {
+                        Button { model.startTraining() } label: {
                             Label("Start finetune", systemImage: "play.fill")
                         }
                         .buttonStyle(.borderedProminent)

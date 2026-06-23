@@ -56,10 +56,12 @@ jobs:
           want="${{ steps.version.outputs.version }}"
           py=$(sed -n -E 's/^version = "(.*)"/\1/p' backend/pyproject.toml | head -1)
           mv=$(sed -n -E 's/.*MARKETING_VERSION: "(.*)"/\1/p' App/project.yml | head -1)
-          echo "tag=$want  pyproject=$py  project.yml=$mv"
+          iv=$(sed -n -E 's/^__version__ = "(.*)"/\1/p' backend/tinyforge/__init__.py | head -1)
+          echo "tag=$want  pyproject=$py  project.yml=$mv  __init__=$iv"
           rc=0
           [ "$py" = "$want" ] || { echo "::error::backend/pyproject.toml version '$py' != tag '$want'"; rc=1; }
           [ "$mv" = "$want" ] || { echo "::error::App/project.yml MARKETING_VERSION '$mv' != tag '$want'"; rc=1; }
+          [ "$iv" = "$want" ] || { echo "::error::backend/tinyforge/__init__.py __version__ '$iv' != tag '$want'"; rc=1; }
           if [ "$rc" -ne 0 ]; then
             echo "Use scripts/release.sh $want to bump + tag in sync, then retry." >&2
             exit 1
@@ -155,6 +157,7 @@ jobs:
           name: TinyForge ${{ steps.version.outputs.tag }}
           files: ${{ env.DMG }}
           generate_release_notes: true
+          append_body: true # keep hand-written release notes; append the DMG note + changelog
           fail_on_unmatched_files: true
           body: |
             macOS (Apple Silicon) build of TinyForge ${{ steps.version.outputs.tag }}.

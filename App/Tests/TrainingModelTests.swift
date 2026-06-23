@@ -20,6 +20,24 @@ struct TrainingModelTests {
         #expect(!sut.canStart)
     }
 
+    @Test func cancelStreamingStopsWatchingWithoutStoppingRun() async {
+        let started = CancelFlag(), cancelled = CancelFlag()
+        let api = FakeBackendAPI()
+        let sut = TrainingModel(
+            api: api, events: CancelObservingRunEvents(started: started, cancelled: cancelled))
+        sut.name = "exp"
+        sut.modelRepo = "m"
+        sut.datasetId = "ds1"
+
+        sut.startTraining()
+        while sut.activeRunId == nil { await Task.yield() }
+        sut.cancelStreaming()
+
+        while !cancelled.isSet { await Task.yield() }
+        #expect(cancelled.isSet)         // event WebSocket closed
+        #expect(api.stoppedRun == nil)   // the backend run keeps going
+    }
+
     @Test func lmEngineCanStartWithDatasetButNoModel() {
         let api = FakeBackendAPI()
         let sut = TrainingModel(api: api, events: FakeRunEventStreaming(events: []))

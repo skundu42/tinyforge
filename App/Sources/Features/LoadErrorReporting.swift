@@ -27,7 +27,7 @@ extension LoadErrorReporting {
         do {
             return try await operation()
         } catch {
-            loadError = "\(what) failed: \(error)"
+            loadError = "\(what) failed: \(error.localizedDescription)"
             return nil
         }
     }

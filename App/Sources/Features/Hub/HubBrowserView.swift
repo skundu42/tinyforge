@@ -5,13 +5,64 @@ struct HubBrowserView: View {
     @State private var selectedId: HubModel.ID?
 
     var body: some View {
-        VStack(spacing: 0) {
-            searchBar
-            Divider()
-            content
+        VSplitView {
+            downloadedPane
+            searchPane
         }
         .navigationTitle("Models")
         .task { await model.loadDownloaded() }
+        .onDisappear { model.cancelStreaming() }
+    }
+
+    // Downloaded models are pinned to the top — always one glance away.
+    private var downloadedPane: some View {
+        ScrollView {
+            Panel(
+                title: "Downloaded models",
+                subtitle: downloadedSubtitle,
+                systemImage: "internaldrive.fill"
+            ) {
+                if model.downloadedModels.isEmpty {
+                    Text("Nothing downloaded yet — search below to find a model. "
+                        + "It'll appear here, ready to finetune.")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(Array(model.downloadedModels.enumerated()), id: \.element.id) { index, repo in
+                            DownloadedModelRow(repo: repo) {
+                                Task { await model.deleteDownloaded(repo.repoId) }
+                            }
+                            if index < model.downloadedModels.count - 1 { Divider() }
+                        }
+                    }
+                }
+            }
+            .padding(Theme.Space.l)
+            .frame(maxWidth: 720, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(minHeight: 150)
+    }
+
+    private var downloadedSubtitle: String {
+        guard !model.downloadedModels.isEmpty else { return "Nothing on your Mac yet" }
+        let count = model.downloadedModels.count
+        return "\(count) on your Mac · \(ByteFormat.string(totalDownloadedBytes)) · ready to finetune"
+    }
+
+    private var totalDownloadedBytes: Int {
+        model.downloadedModels.reduce(0) { $0 + $1.sizeOnDisk }
+    }
+
+    // The bottom half: search and browse the Hub.
+    private var searchPane: some View {
+        VStack(spacing: 0) {
+            searchBar
+            Divider()
+            searchContent
+        }
+        .frame(minHeight: 260)
     }
 
     private var searchBar: some View {
@@ -35,17 +86,13 @@ struct HubBrowserView: View {
     }
 
     @ViewBuilder
-    private var content: some View {
+    private var searchContent: some View {
         switch model.phase {
         case .idle:
-            if model.downloadedModels.isEmpty {
-                EmptyState(
-                    systemImage: "square.stack.3d.up",
-                    title: "Find a model to start",
-                    message: "Search HuggingFace for a small model — try “SmolLM”, “Llama 3.2”, or “Qwen”. Models from the mlx-community account are ready to finetune.")
-            } else {
-                downloadedSection
-            }
+            EmptyState(
+                systemImage: "magnifyingglass",
+                title: "Search for a model",
+                message: "Try “SmolLM”, “Llama 3.2”, or “Qwen”. Models from the mlx-community account are ready to finetune.")
         case .searching:
             ProgressView("Searching…").frame(maxWidth: .infinity, maxHeight: .infinity)
         case .failed(let message):
@@ -76,39 +123,13 @@ struct HubBrowserView: View {
         }
     }
 
-    private var downloadedSection: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Space.l) {
-                Panel(
-                    title: "Downloaded models",
-                    subtitle: "\(model.downloadedModels.count) on your Mac · ready to finetune",
-                    systemImage: "internaldrive.fill"
-                ) {
-                    VStack(spacing: 0) {
-                        ForEach(Array(model.downloadedModels.enumerated()), id: \.element.id) { index, repo in
-                            DownloadedModelRow(repo: repo) {
-                                Task { await model.deleteDownloaded(repo.repoId) }
-                            }
-                            if index < model.downloadedModels.count - 1 { Divider() }
-                        }
-                    }
-                }
-                Text("Search above to find and download more models.")
-                    .font(.callout).foregroundStyle(.secondary)
-            }
-            .padding(Theme.Space.l)
-            .frame(maxWidth: 720, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
     @ViewBuilder
     private var detailPane: some View {
         if model.detailLoading {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let detail = model.selectedDetail {
             HubModelDetailView(detail: detail, progress: model.progress(for: detail.id)) {
-                Task { await model.download(detail.id) }
+                model.startDownload(detail.id)
             }
         } else {
             EmptyState(
@@ -127,7 +148,10 @@ private struct DownloadedModelRow: View {
         HStack(spacing: Theme.Space.m) {
             Image(systemName: "cube.fill").foregroundStyle(Theme.accent)
             VStack(alignment: .leading, spacing: 2) {
-                Text(repo.repoId).font(.callout.weight(.medium)).lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(repo.repoId).font(.callout.weight(.medium)).lineLimit(1)
+                    if repo.isTooBigForSystem { TooBigTag() }
+                }
                 Text("\(repo.nbFiles) file\(repo.nbFiles == 1 ? "" : "s")")
                     .font(.caption2).foregroundStyle(.secondary)
             }
@@ -208,6 +232,7 @@ private struct HubModelDetailView: View {
                 Label(ByteFormat.string(total), systemImage: "internaldrive")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            if SystemMemory.isTooBig(sizeBytes: detail.totalSize) { TooBigTag() }
         }
     }
 
@@ -234,10 +259,13 @@ private struct HubModelDetailView: View {
                 }
             }
         } else {
-            Button(action: onDownload) {
-                Label("Download", systemImage: "arrow.down.circle.fill")
+            VStack(alignment: .leading, spacing: 8) {
+                if SystemMemory.isTooBig(sizeBytes: detail.totalSize) { TooBigTag() }
+                Button(action: onDownload) {
+                    Label("Download", systemImage: "arrow.down.circle.fill")
+                }
+                .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
         }
     }
 

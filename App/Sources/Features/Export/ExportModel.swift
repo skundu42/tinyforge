@@ -16,14 +16,31 @@ final class ExportModel: LoadErrorReporting {
     private(set) var busy = false
     private(set) var message: String?
     var loadError: String?
+    /// Interval between export status polls (overridable in tests).
+    var pollInterval: Duration = .seconds(1)
 
     private let api: any BackendAPI
+    private var exportTask: Task<Void, Never>?
 
     init(api: any BackendAPI) {
         self.api = api
     }
 
     var canExport: Bool { !runId.isEmpty && !busy }
+
+    /// Runs the export+poll as a cancellable task so leaving the screen stops the
+    /// polling loop instead of leaking it.
+    func startExport() {
+        exportTask?.cancel()
+        busy = true
+        exportTask = Task { [weak self] in await self?.start() }
+    }
+
+    func cancelPolling() {
+        exportTask?.cancel()
+        exportTask = nil
+        busy = false
+    }
 
     func loadInputs() async {
         runs = (await attempt("Load finetunes") { try await api.listRuns() } ?? [])
@@ -45,7 +62,11 @@ final class ExportModel: LoadErrorReporting {
                 pushRepo: pushRepo.isEmpty ? nil : pushRepo)
             var status = try await api.startExport(request)
             while status.state == "running" {
-                try? await Task.sleep(for: .seconds(1))
+                do {
+                    try await Task.sleep(for: pollInterval)
+                } catch {
+                    return  // cancelled (e.g. view dismissed) — stop polling
+                }
                 status = try await api.getExport(id: status.id)
             }
             message = status.state == "completed"
@@ -53,7 +74,7 @@ final class ExportModel: LoadErrorReporting {
                 : "Export failed: \(status.error ?? "unknown")"
             await refresh()
         } catch {
-            message = String(describing: error)
+            message = error.localizedDescription
         }
     }
 }

@@ -6,7 +6,10 @@
 
 from __future__ import annotations
 
-from fastapi import Depends, FastAPI
+from contextlib import asynccontextmanager
+
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from tinyforge import __version__
 from tinyforge.api.auth import make_token_dependency
@@ -14,11 +17,28 @@ from tinyforge.api.routers import datasets, exports, health, hub, infer, runs, r
 from tinyforge.services import Services, build_services
 
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    yield
+    # Graceful shutdown (e.g. SIGTERM from the host app): reap any training/export
+    # children so they don't outlive the backend and hold the GPU.
+    from tinyforge.children import child_registry
+
+    child_registry.terminate_all()
+
+
 def create_app(token: str, services: Services | None = None) -> FastAPI:
-    app = FastAPI(title="TinyForge backend", version=__version__)
+    app = FastAPI(title="TinyForge backend", version=__version__, lifespan=_lifespan)
 
     app.state.token = token
     app.state.services = services if services is not None else build_services()
+
+    @app.exception_handler(KeyError)
+    async def _missing_resource(request: Request, exc: KeyError) -> JSONResponse:
+        # Registries raise a bare KeyError(id) for an unknown run/dataset/export;
+        # surface that as 404 instead of an opaque 500.
+        key = exc.args[0] if exc.args else "resource"
+        return JSONResponse(status_code=404, content={"detail": f"{key} not found"})
 
     require_token = make_token_dependency(token)
 

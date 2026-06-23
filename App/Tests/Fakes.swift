@@ -160,10 +160,60 @@ final class FakeBackendAPI: BackendAPI, @unchecked Sendable {
         return exports
     }
 
+    private(set) var getExportCalls = 0
+
     func getExport(id: String) async throws -> ExportStatus {
-        exportResult ?? exports.first { $0.id == id } ?? ExportStatus(
+        getExportCalls += 1
+        return exportResult ?? exports.first { $0.id == id } ?? ExportStatus(
             id: id, runId: "r1", target: "safetensors", state: "completed",
             error: nil, outputPath: "/exports/exp1/fused", hubUrl: nil)
+    }
+}
+
+/// Thread-safe flag for observing async cancellation in tests.
+final class CancelFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+    func set() { lock.withLock { value = true } }
+    var isSet: Bool { lock.withLock { value } }
+}
+
+/// Inference stream that emits one token and then stays open until the consuming
+/// task is cancelled, recording the cancellation.
+struct CancelObservingInference: InferenceStreaming {
+    let started: CancelFlag
+    let cancelled: CancelFlag
+
+    func stream(_ request: GenRequest) -> AsyncStream<InferEvent> {
+        let started = started, cancelled = cancelled
+        return AsyncStream { continuation in
+            continuation.onTermination = { reason in
+                if case .cancelled = reason { cancelled.set() }
+            }
+            started.set()
+            continuation.yield(.token("partial"))
+            // Never finish: emulate an in-progress generation.
+        }
+    }
+}
+
+/// Run-event stream that stays open until the consuming task is cancelled.
+struct CancelObservingRunEvents: RunEventStreaming {
+    let started: CancelFlag
+    let cancelled: CancelFlag
+
+    func stream(runId: String) -> AsyncStream<TrainEvent> {
+        let started = started, cancelled = cancelled
+        return AsyncStream { continuation in
+            continuation.onTermination = { reason in
+                if case .cancelled = reason { cancelled.set() }
+            }
+            started.set()
+            continuation.yield(TrainEvent(
+                event: "train", iter: 1, trainLoss: 5.0, valLoss: nil, lr: nil,
+                tokensPerSec: nil, itPerSec: nil, peakMemGb: nil, trainedTokens: nil,
+                state: nil, error: nil, path: nil, text: nil))
+        }
     }
 }
 
@@ -211,6 +261,25 @@ struct FakeProgressStreaming: ProgressStreaming {
                 continuation.yield(update)
             }
             continuation.finish()
+        }
+    }
+}
+
+/// Progress stream that stays open until the consuming task is cancelled.
+struct CancelObservingProgress: ProgressStreaming {
+    let started: CancelFlag
+    let cancelled: CancelFlag
+
+    func stream(jobId: String) -> AsyncStream<DownloadProgress> {
+        let started = started, cancelled = cancelled
+        return AsyncStream { continuation in
+            continuation.onTermination = { reason in
+                if case .cancelled = reason { cancelled.set() }
+            }
+            started.set()
+            continuation.yield(DownloadProgress(
+                id: jobId, repoId: "m/x", repoType: "model", totalBytes: 100,
+                downloadedBytes: 10, fraction: 0.1, state: "running", error: nil, localPath: nil))
         }
     }
 }

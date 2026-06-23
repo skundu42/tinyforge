@@ -25,7 +25,7 @@ struct HubBrowserModelTests {
 
     @Test func searchFailureSetsFailedPhase() async {
         let api = FakeBackendAPI()
-        api.searchError = APIError.unexpectedStatus(500)
+        api.searchError = APIError.unexpectedStatus(500, detail: nil)
         let sut = HubBrowserModel(api: api, progress: FakeProgressStreaming(updates: []))
 
         await sut.search()
@@ -68,5 +68,20 @@ struct HubBrowserModelTests {
 
         #expect(sut.loadError != nil)
         #expect(sut.downloadedModels.isEmpty)
+    }
+
+    @Test func cancelStreamingStopsDownloadStream() async {
+        let started = CancelFlag(), cancelled = CancelFlag()
+        let api = FakeBackendAPI()
+        api.startResult = progress(repoId: "m/x", fraction: 0, state: "running")
+        let sut = HubBrowserModel(
+            api: api, progress: CancelObservingProgress(started: started, cancelled: cancelled))
+
+        sut.startDownload("m/x")
+        while !started.isSet { await Task.yield() }
+        sut.cancelStreaming()
+
+        while !cancelled.isSet { await Task.yield() }
+        #expect(cancelled.isSet)  // progress WebSocket torn down on disappear
     }
 }

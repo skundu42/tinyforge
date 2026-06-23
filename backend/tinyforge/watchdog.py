@@ -22,19 +22,30 @@ def _default_on_death() -> None:  # pragma: no cover - exercised only in product
     os._exit(0)
 
 
+def _default_cleanup() -> None:
+    # Reap training/export children before exiting, or they orphan onto launchd
+    # and keep holding the GPU — the very thing this watchdog exists to prevent.
+    from tinyforge.children import child_registry
+
+    child_registry.terminate_all()
+
+
 def start_parent_death_watchdog(
     initial_ppid: int | None = None,
     get_ppid: Callable[[], int] = os.getppid,
     on_death: Callable[[], None] = _default_on_death,
+    cleanup: Callable[[], None] = _default_cleanup,
     interval: float = 1.0,
 ) -> threading.Thread:
-    """Start a daemon thread that calls `on_death` once the parent disappears."""
+    """Start a daemon thread that reaps children, then calls `on_death`, once the
+    parent disappears."""
     base = get_ppid() if initial_ppid is None else initial_ppid
 
     def loop() -> None:
         while True:
             time.sleep(interval)
             if parent_died(base, get_ppid()):
+                cleanup()
                 on_death()
                 return
 

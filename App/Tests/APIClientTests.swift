@@ -75,4 +75,28 @@ struct APIClientTests {
             _ = try await client.runtime()
         }
     }
+
+    @Test func unexpectedStatusCarriesServerDetail() async {
+        let body = Data(#"{"detail":"run abc not found"}"#.utf8)
+        let client = APIClient(
+            baseURL: base, token: "tok",
+            transport: FakeTransport(recorder: RequestRecorder(), status: 404, body: body)
+        )
+
+        await #expect(throws: APIError.unexpectedStatus(404, detail: "run abc not found")) {
+            _ = try await client.runStatus(id: "abc")
+        }
+    }
+
+    @Test func unexpectedStatusErrorDescriptionPrefersDetail() {
+        #expect(APIError.unexpectedStatus(500, detail: "boom detail").errorDescription == "boom detail")
+        #expect(APIError.unexpectedStatus(503, detail: nil).errorDescription?.contains("503") == true)
+    }
+
+    @Test func defaultTransportHasBoundedTimeouts() {
+        let config = URLSessionTransport().session.configuration
+        // No 7-day resource default; a hung backend call cannot spin forever.
+        #expect(config.timeoutIntervalForRequest <= 300)
+        #expect(config.timeoutIntervalForResource <= 3600)
+    }
 }

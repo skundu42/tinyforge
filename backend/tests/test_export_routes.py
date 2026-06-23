@@ -61,3 +61,13 @@ def test_list_and_get(client_and_exports) -> None:
     client, _ = client_and_exports
     assert client.get("/v1/exports", headers=headers()).json()[0]["id"] == "exp1"
     assert client.get("/v1/exports/exp1", headers=headers()).json()["state"] == "completed"
+
+
+def test_get_unknown_export_returns_404(client_and_exports) -> None:
+    client, exports = client_and_exports
+
+    def missing(export_id):
+        raise KeyError(export_id)
+
+    exports.status = missing
+    assert client.get("/v1/exports/nope", headers=headers()).status_code == 404

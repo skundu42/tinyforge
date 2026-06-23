@@ -108,6 +108,17 @@ def test_ws_streams_events_then_terminal_status(client_and_training) -> None:
     assert any(m.get("event") == "status" and m["state"] == "completed" for m in messages)
 
 
+def test_get_unknown_run_returns_404(client_and_training) -> None:
+    client, training = client_and_training
+
+    def missing(run_id):
+        raise KeyError(run_id)
+
+    training.get = missing
+    resp = client.get("/v1/runs/nope", headers=headers())
+    assert resp.status_code == 404
+
+
 def test_ws_rejects_bad_token(client_and_training) -> None:
     client, _ = client_and_training
     with pytest.raises(Exception):

@@ -74,3 +74,40 @@ def test_infer_rejects_bad_token() -> None:
     with pytest.raises(Exception):
         with client.websocket_connect("/v1/infer/ws?token=wrong") as ws:
             ws.receive_json()
+
+
+def test_infer_cancels_generation_when_client_disconnects() -> None:
+    import time
+
+    captured: dict = {}
+
+    class CapturingService:
+        """Streams forever until cancelled, exposing the cancel predicate."""
+
+        def stream(self, request, should_cancel=lambda: False):
+            captured["should_cancel"] = should_cancel
+            index = 0
+            while not should_cancel():
+                yield str(index)
+                index += 1
+                time.sleep(0.005)
+
+    services = Services(
+        auth=None, hub=None, downloads=None, cache=None, datasets=None,
+        training=None, inference=CapturingService(), exports=None,
+    )
+    app = create_app(token=TOKEN, services=services)
+    app.state.token = TOKEN
+    client = TestClient(app)
+
+    with client.websocket_connect(f"/v1/infer/ws?token={TOKEN}") as ws:
+        ws.send_json(request_body())
+        assert ws.receive_json()["event"] == "token"  # generation is under way
+        ws.receive_json()
+
+    # After the client disconnects the producer must be told to stop.
+    should_cancel = captured["should_cancel"]
+    deadline = time.time() + 2.0
+    while time.time() < deadline and not should_cancel():
+        time.sleep(0.01)
+    assert should_cancel() is True

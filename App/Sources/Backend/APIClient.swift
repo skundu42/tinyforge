@@ -166,8 +166,22 @@ actor APIClient: BackendAPI {
         case 401:
             throw APIError.unauthorized
         default:
-            throw APIError.unexpectedStatus(response.statusCode)
+            throw APIError.unexpectedStatus(response.statusCode, detail: Self.errorDetail(from: data))
         }
+    }
+
+    /// Pull a human message out of a FastAPI error body: `{"detail": "..."}` or
+    /// a 422 validation body `{"detail": [{"msg": "..."}]}`; else the raw text.
+    private static func errorDetail(from data: Data) -> String? {
+        guard !data.isEmpty else { return nil }
+        if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let detail = object["detail"] as? String { return detail }
+            if let items = object["detail"] as? [[String: Any]] {
+                let messages = items.compactMap { $0["msg"] as? String }
+                if !messages.isEmpty { return messages.joined(separator: "; ") }
+            }
+        }
+        return String(data: data, encoding: .utf8)
     }
 }
 

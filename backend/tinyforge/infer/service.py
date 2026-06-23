@@ -7,6 +7,7 @@ generator is injectable so the WebSocket plumbing is testable without mlx.
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable, Iterator
 
 from pydantic import BaseModel
@@ -66,6 +67,28 @@ def _default_generate(req: GenRequest) -> Iterator[str]:
 class InferenceService:
     def __init__(self, generate_fn: Callable[[GenRequest], Iterator[str]] = _default_generate) -> None:
         self._generate = generate_fn
+        # The single-entry model cache and mlx itself are not thread-safe, so
+        # generations are serialized (e.g. base-vs-finetuned compare runs one at
+        # a time rather than corrupting the cache mid-eval).
+        self._lock = threading.Lock()
 
-    def stream(self, request: GenRequest) -> Iterator[str]:
-        return self._generate(request)
+    def stream(
+        self, request: GenRequest, should_cancel: Callable[[], bool] = lambda: False
+    ) -> Iterator[str]:
+        """Yield generated text deltas, stopping early when `should_cancel()` is true.
+
+        Cancellation stops pulling from the underlying generator, so the GPU work
+        suspends between tokens; the generator is then closed so its own cleanup
+        (releasing the lock / mlx resources) runs promptly.
+        """
+        with self._lock:
+            generated = self._generate(request)
+            try:
+                for delta in generated:
+                    if should_cancel():
+                        break
+                    yield delta
+            finally:
+                close = getattr(generated, "close", None)
+                if callable(close):
+                    close()

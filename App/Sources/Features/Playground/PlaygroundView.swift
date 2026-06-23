@@ -12,6 +12,7 @@ struct PlaygroundView: View {
         }
         .navigationTitle("Playground")
         .task { await model.loadInputs() }
+        .onDisappear { model.stop() }
     }
 
     private var promptPanel: some View {
@@ -25,7 +26,9 @@ struct PlaygroundView: View {
                         if !model.cachedModels.isEmpty {
                             Picker("Model", selection: $model.modelRepo) {
                                 Text("Select…").tag("")
-                                ForEach(model.cachedModels) { Text($0.repoId).tag($0.repoId) }
+                                ForEach(model.cachedModels) { repo in
+                                    Text(repo.pickerLabel).tag(repo.repoId)
+                                }
                             }
                         }
                         if !model.scratchRuns.isEmpty {
@@ -58,6 +61,11 @@ struct PlaygroundView: View {
                     }
                 }
 
+                if let selected = model.cachedModels.first(where: { $0.repoId == model.modelRepo }),
+                   selected.isTooBigForSystem {
+                    HStack { TooBigTag(); Spacer() }
+                }
+
                 TextEditor(text: $model.prompt)
                     .font(.body)
                     .frame(height: 70)
@@ -76,15 +84,18 @@ struct PlaygroundView: View {
                             .fixedSize()
                     }
                     Spacer(minLength: Theme.Space.l)
-                    Button { Task { await model.generate() } } label: {
-                        if model.generating {
-                            ProgressView().controlSize(.small)
-                        } else {
+                    if model.generating {
+                        Button(role: .cancel) { model.stop() } label: {
+                            Label("Stop", systemImage: "stop.fill")
+                        }
+                        .buttonStyle(.bordered)
+                    } else {
+                        Button { model.startGenerate() } label: {
                             Label("Generate", systemImage: "sparkles")
                         }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!model.canGenerate)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!model.canGenerate)
                 }
 
                 if let error = model.error {

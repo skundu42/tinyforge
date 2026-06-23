@@ -35,7 +35,7 @@ struct ExportView: View {
                         }
 
                         HStack {
-                            Button { Task { await model.start() } } label: {
+                            Button { model.startExport() } label: {
                                 if model.busy { ProgressView().controlSize(.small) } else {
                                     Label("Export", systemImage: "shippingbox.fill")
                                 }
@@ -81,6 +81,7 @@ struct ExportView: View {
         }
         .navigationTitle("Export")
         .task { await model.loadInputs() }
+        .onDisappear { model.cancelPolling() }
     }
 
     private func icon(_ state: String) -> String {

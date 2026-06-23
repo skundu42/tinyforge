@@ -62,7 +62,7 @@ final class DatasetBuilderModel: LoadErrorReporting {
         do {
             preview = try await api.previewDataset(source, limit: 25)
         } catch {
-            previewError = String(describing: error)
+            previewError = error.localizedDescription
         }
     }
 
@@ -87,7 +87,7 @@ final class DatasetBuilderModel: LoadErrorReporting {
             message = "Prepared “\(record.name)” — \(record.trainRows) train / \(record.valRows) val rows"
             await loadRegistry()
         } catch {
-            message = "Prepare failed: \(error)"
+            message = "Prepare failed: \(error.localizedDescription)"
         }
     }
 

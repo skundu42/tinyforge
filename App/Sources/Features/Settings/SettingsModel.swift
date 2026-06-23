@@ -41,7 +41,7 @@ final class SettingsModel: LoadErrorReporting {
             tokenInput = ""
             message = auth.loggedIn ? "Signed in as \(auth.name ?? "?")" : "Login failed"
         } catch {
-            message = "Login failed: \(error)"
+            message = "Login failed: \(error.localizedDescription)"
         }
     }
 

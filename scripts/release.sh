@@ -33,12 +33,13 @@ fi
 echo "==> bumping version to $version"
 sed -i.bak -E "s/^version = \".*\"/version = \"$version\"/" backend/pyproject.toml && rm backend/pyproject.toml.bak
 sed -i.bak -E "s/(MARKETING_VERSION: )\".*\"/\1\"$version\"/" App/project.yml && rm App/project.yml.bak
+sed -i.bak -E "s/^__version__ = \".*\"/__version__ = \"$version\"/" backend/tinyforge/__init__.py && rm backend/tinyforge/__init__.py.bak
 
 echo "==> refreshing backend/uv.lock"
 ( cd backend && uv lock )
 
 echo "==> committing + tagging $tag"
-git add backend/pyproject.toml App/project.yml backend/uv.lock
+git add backend/pyproject.toml App/project.yml backend/tinyforge/__init__.py backend/uv.lock
 git commit -m "release $tag"
 git tag -a "$tag" -m "TinyForge $tag"
 

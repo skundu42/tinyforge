@@ -39,6 +39,23 @@ struct PlaygroundModelTests {
         #expect(sut.error == "model not found")
     }
 
+    @Test func stopCancelsActiveGeneration() async {
+        let started = CancelFlag(), cancelled = CancelFlag()
+        let sut = PlaygroundModel(
+            api: FakeBackendAPI(),
+            infer: CancelObservingInference(started: started, cancelled: cancelled))
+        sut.modelRepo = "m/x"
+        sut.prompt = "hi"
+
+        sut.startGenerate()
+        while sut.baseOutput.isEmpty { await Task.yield() }  // generation under way
+        sut.stop()
+
+        while !cancelled.isSet { await Task.yield() }
+        #expect(cancelled.isSet)            // the inference socket was torn down
+        #expect(sut.generating == false)
+    }
+
     @Test func loadInputsFiltersModelsAndCompletedRuns() async {
         let (sut, api) = model(events: [])
         api.cache = CacheInfo(sizeOnDisk: 0, repos: [

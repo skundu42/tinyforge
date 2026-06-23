@@ -1,10 +1,23 @@
 """Tests for ExportManager: LoRA-adapter fuse/convert vs full-model (lm) export."""
 
+import sys
 import time
 from pathlib import Path
 
-from tinyforge.export.manager import ExportManager
+import tinyforge.export.manager as manager_mod
+from tinyforge.export.manager import ExportManager, _default_run_command
 from tinyforge.export.models import ExportRequest
+
+
+class RecordingRegistry:
+    def __init__(self) -> None:
+        self.events: list[tuple[str, int]] = []
+
+    def register(self, pid: int) -> None:
+        self.events.append(("register", pid))
+
+    def unregister(self, pid: int) -> None:
+        self.events.append(("unregister", pid))
 
 
 def _wait(predicate, timeout=2.0):
@@ -106,3 +119,34 @@ def test_lm_safetensors_missing_run_dir_fails(tmp_path) -> None:
     job_id = mgr.start(ExportRequest(run_id="missing", target="safetensors"))
     assert _wait(lambda: mgr.status(job_id).state == "failed")
     assert "copy failed" in mgr.status(job_id).error
+
+
+# --- child-process tracking (orphan reaping) --------------------------------
+
+def test_default_run_command_registers_child_around_subprocess(tmp_path) -> None:
+    registry = RecordingRegistry()
+    code, _ = _default_run_command(
+        [sys.executable, "-c", "pass"], cwd=str(tmp_path), registry=registry
+    )
+    assert code == 0
+    assert [kind for kind, _ in registry.events] == ["register", "unregister"]
+    assert registry.events[0][1] == registry.events[1][1]  # same pid both times
+
+
+def test_default_run_command_starts_new_session(monkeypatch, tmp_path) -> None:
+    captured: dict = {}
+
+    class FakePopen:
+        returncode = 0
+
+        def __init__(self, cmd, **kwargs):
+            captured.update(kwargs)
+            self.pid = 7
+
+        def communicate(self):
+            return ("", "")
+
+    monkeypatch.setattr(manager_mod.subprocess, "Popen", FakePopen)
+    _default_run_command(["x"], cwd=str(tmp_path))
+
+    assert captured.get("start_new_session") is True

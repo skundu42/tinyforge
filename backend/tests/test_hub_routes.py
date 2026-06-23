@@ -157,6 +157,38 @@ def test_start_download_returns_friendly_error_for_gated_repo() -> None:
     assert "gated" in body["error"].lower()
 
 
+def test_model_detail_gated_returns_friendly_403() -> None:
+    # The download path already translates gated/not-found; the detail view that
+    # precedes it must too, instead of leaking a raw HTTP 500.
+    class GatedHub:
+        def model_detail(self, repo_id):
+            raise type("GatedRepoError", (Exception,), {})("401 cannot access gated repo")
+
+    services = Services(
+        auth=FakeAuth(), hub=GatedHub(), downloads=FakeDownloads(), cache=FakeCache(),
+        datasets=None, training=None, inference=None, exports=None,
+    )
+    client = TestClient(create_app(token=TOKEN, services=services))
+    resp = client.get("/v1/hub/models/meta-llama/Llama-3.2-1B", headers=headers())
+    assert resp.status_code == 403
+    assert "gated" in resp.json()["detail"].lower()
+
+
+def test_model_detail_not_found_returns_friendly_404() -> None:
+    class MissingHub:
+        def model_detail(self, repo_id):
+            raise type("RepositoryNotFoundError", (Exception,), {})("404 not found")
+
+    services = Services(
+        auth=FakeAuth(), hub=MissingHub(), downloads=FakeDownloads(), cache=FakeCache(),
+        datasets=None, training=None, inference=None, exports=None,
+    )
+    client = TestClient(create_app(token=TOKEN, services=services))
+    resp = client.get("/v1/hub/models/does/not-exist", headers=headers())
+    assert resp.status_code == 404
+    assert "not found" in resp.json()["detail"].lower()
+
+
 def test_cache_info_and_delete(client_and_services) -> None:
     client, _ = client_and_services
     assert client.get("/v1/hub/cache", headers=headers()).json()["size_on_disk"] == 2000

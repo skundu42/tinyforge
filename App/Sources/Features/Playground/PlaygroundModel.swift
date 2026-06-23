@@ -25,6 +25,7 @@ final class PlaygroundModel: LoadErrorReporting {
     private let api: any BackendAPI
     private let infer: any InferenceStreaming
     private let nativeInfer: any InferenceStreaming
+    private var generationTask: Task<Void, Never>?
 
     init(
         api: any BackendAPI, infer: any InferenceStreaming,
@@ -52,6 +53,21 @@ final class PlaygroundModel: LoadErrorReporting {
         cachedModels = repos.filter { $0.repoType == "model" }
         runs = (await attempt("Load finetunes") { try await api.listRuns() } ?? [])
             .filter { $0.state == "completed" }
+    }
+
+    /// Owns the generation as a cancellable task so the view (and the Stop button)
+    /// can tear it down; cancelling closes the inference socket, which tells the
+    /// backend to stop generating.
+    func startGenerate() {
+        generationTask?.cancel()
+        generating = true
+        generationTask = Task { [weak self] in await self?.generate() }
+    }
+
+    func stop() {
+        generationTask?.cancel()
+        generationTask = nil
+        generating = false
     }
 
     func generate() async {

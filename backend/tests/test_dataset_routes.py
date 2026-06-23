@@ -89,3 +89,13 @@ def test_list_and_delete(client_and_services) -> None:
     assert client.get("/v1/datasets", headers=headers()).json()[0]["name"] == "math"
     assert client.request("DELETE", "/v1/datasets/ds1", headers=headers()).json()["ok"] is True
     assert services.datasets.calls["delete"] == "ds1"
+
+
+def test_get_unknown_dataset_returns_404(client_and_services) -> None:
+    client, services = client_and_services
+
+    def missing(dataset_id):
+        raise KeyError(dataset_id)
+
+    services.datasets.get = missing
+    assert client.get("/v1/datasets/nope", headers=headers()).status_code == 404

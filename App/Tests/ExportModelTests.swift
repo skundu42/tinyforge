@@ -61,4 +61,21 @@ struct ExportModelTests {
         #expect(sut.runs.isEmpty)
         #expect(sut.exports.isEmpty)
     }
+
+    @Test func cancelPollingStopsPolling() async {
+        let (sut, api) = model()
+        api.exportResult = ExportStatus(
+            id: "exp1", runId: "r1", target: "safetensors", state: "running",
+            error: nil, outputPath: nil, hubUrl: nil)
+        sut.pollInterval = .milliseconds(1)
+
+        sut.startExport()
+        while api.getExportCalls < 1 { await Task.yield() }
+        sut.cancelPolling()
+
+        try? await Task.sleep(for: .milliseconds(20))
+        let count = api.getExportCalls
+        try? await Task.sleep(for: .milliseconds(20))
+        #expect(api.getExportCalls == count)  // polling stopped, not busy-looping
+    }
 }

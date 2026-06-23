@@ -16,6 +16,7 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from tinyforge.hub.errors import classify_hub_error
 from tinyforge.hub.models import DownloadPlan, DownloadPlanFile, DownloadProgress
 
 # plan_fn(repo_id, repo_type) -> list of (filename, size, will_download)
@@ -32,20 +33,8 @@ def _friendly_download_error(exc: Exception) -> str:
     a gated/private repo with no token, and a mistyped repo id — are worth
     spelling out; everything else passes through verbatim.
     """
-    class_names = {cls.__name__ for cls in type(exc).__mro__}
-    status = getattr(getattr(exc, "response", None), "status_code", None)
-    # Check gated before not-found: GatedRepoError subclasses RepositoryNotFoundError.
-    if "GatedRepoError" in class_names or status in (401, 403):
-        return (
-            "This model is gated. Request access on its Hugging Face page, then "
-            "sign in with a Hugging Face token in Settings to download it."
-        )
-    if "RepositoryNotFoundError" in class_names or status == 404:
-        return (
-            "Model not found on Hugging Face. Check the repository id — if it is "
-            "private, sign in with a Hugging Face token in Settings."
-        )
-    return str(exc)
+    classified = classify_hub_error(exc)
+    return classified[1] if classified else str(exc)
 
 
 @dataclass

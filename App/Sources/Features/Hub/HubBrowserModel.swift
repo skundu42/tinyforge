@@ -23,6 +23,7 @@ final class HubBrowserModel: LoadErrorReporting {
 
     private let api: any BackendAPI
     private let progress: any ProgressStreaming
+    private var downloadTasks: [String: Task<Void, Never>] = [:]
 
     init(api: any BackendAPI, progress: any ProgressStreaming) {
         self.api = api
@@ -42,7 +43,7 @@ final class HubBrowserModel: LoadErrorReporting {
             )
             phase = .results(results)
         } catch {
-            phase = .failed(String(describing: error))
+            phase = .failed(error.localizedDescription)
         }
     }
 
@@ -63,6 +64,19 @@ final class HubBrowserModel: LoadErrorReporting {
         await loadDownloaded()
     }
 
+    /// Starts a download as a cancellable task so leaving the screen tears the
+    /// progress stream down instead of leaking it.
+    func startDownload(_ repoId: String) {
+        downloadTasks[repoId]?.cancel()
+        downloadTasks[repoId] = Task { [weak self] in await self?.download(repoId) }
+    }
+
+    /// Cancel all in-flight download progress streams (e.g. on view disappear).
+    func cancelStreaming() {
+        for task in downloadTasks.values { task.cancel() }
+        downloadTasks.removeAll()
+    }
+
     func download(_ repoId: String) async {
         do {
             let started = try await api.startDownload(repoId: repoId, repoType: "model")
@@ -76,7 +90,7 @@ final class HubBrowserModel: LoadErrorReporting {
             downloads[repoId] = DownloadProgress(
                 id: "", repoId: repoId, repoType: "model", totalBytes: 0,
                 downloadedBytes: 0, fraction: 0, state: "error",
-                error: String(describing: error), localPath: nil
+                error: error.localizedDescription, localPath: nil
             )
         }
     }

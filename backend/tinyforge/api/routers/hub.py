@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 import hmac
 
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+from tinyforge.hub.errors import classify_hub_error
 from tinyforge.hub.models import (
     AuthStatus,
     CacheInfo,
@@ -24,6 +25,14 @@ ws_router = APIRouter(prefix="/v1/hub")
 
 def services_of(request: Request) -> Services:
     return request.app.state.services
+
+
+def _raise_for_hub_error(exc: Exception) -> None:
+    """Re-raise as a friendly HTTPException for known Hub failures, else as-is."""
+    classified = classify_hub_error(exc)
+    if classified:
+        raise HTTPException(status_code=classified[0], detail=classified[1])
+    raise exc
 
 
 class DownloadRequest(BaseModel):
@@ -46,10 +55,13 @@ def search_models(
     filter: str | None = None,
     gated: bool | None = None,
 ) -> list[HubModel]:
-    return services_of(request).hub.search_models(
-        query=query, sort=sort, limit=limit, author=author,
-        pipeline_tag=pipeline_tag, filter=filter, gated=gated,
-    )
+    try:
+        return services_of(request).hub.search_models(
+            query=query, sort=sort, limit=limit, author=author,
+            pipeline_tag=pipeline_tag, filter=filter, gated=gated,
+        )
+    except Exception as exc:  # noqa: BLE001 - classified into a friendly HTTP error
+        _raise_for_hub_error(exc)
 
 
 @router.get("/datasets")
@@ -60,14 +72,20 @@ def search_datasets(
     limit: int = 30,
     author: str | None = None,
 ) -> list[HubDataset]:
-    return services_of(request).hub.search_datasets(
-        query=query, sort=sort, limit=limit, author=author
-    )
+    try:
+        return services_of(request).hub.search_datasets(
+            query=query, sort=sort, limit=limit, author=author
+        )
+    except Exception as exc:  # noqa: BLE001 - classified into a friendly HTTP error
+        _raise_for_hub_error(exc)
 
 
 @router.get("/models/{repo_id:path}")
 def model_detail(request: Request, repo_id: str) -> HubModelDetail:
-    return services_of(request).hub.model_detail(repo_id)
+    try:
+        return services_of(request).hub.model_detail(repo_id)
+    except Exception as exc:  # noqa: BLE001 - classified into a friendly HTTP error
+        _raise_for_hub_error(exc)
 
 
 @router.post("/downloads")
