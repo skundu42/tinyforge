@@ -17,14 +17,16 @@ struct PlaygroundView: View {
     private var promptPanel: some View {
         Panel(title: "Prompt", subtitle: "Generate text and compare base vs. finetuned", systemImage: "text.bubble.fill") {
             VStack(alignment: .leading, spacing: Theme.Space.m) {
-                if model.cachedModels.isEmpty {
+                if model.cachedModels.isEmpty && model.scratchRuns.isEmpty {
                     Text("Download a model in the Models tab first.")
                         .font(.callout).foregroundStyle(.secondary)
                 } else {
                     HStack(spacing: Theme.Space.l) {
-                        Picker("Model", selection: $model.modelRepo) {
-                            Text("Select…").tag("")
-                            ForEach(model.cachedModels) { Text($0.repoId).tag($0.repoId) }
+                        if !model.cachedModels.isEmpty {
+                            Picker("Model", selection: $model.modelRepo) {
+                                Text("Select…").tag("")
+                                ForEach(model.cachedModels) { Text($0.repoId).tag($0.repoId) }
+                            }
                         }
                         if !model.scratchRuns.isEmpty {
                             Picker("From-scratch model", selection: Binding(

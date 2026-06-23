@@ -8,7 +8,10 @@ import Observation
 final class TrainingModel: LoadErrorReporting {
     // Config
     var name = ""
-    var engine = "mlx"  // mlx (LLM LoRA) | lm (from-scratch tiny LM)
+    // mlx (LLM LoRA) | lm (from-scratch tiny LM)
+    var engine = "mlx" {
+        didSet { learningRate = (engine == "lm") ? 1e-3 : 1e-5 }
+    }
     var modelRepo = ""
     var datasetId = ""
     var fineTuneType = "lora"

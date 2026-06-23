@@ -8,17 +8,13 @@ def build_fuse_command(
     base_repo: str,
     adapter_path: str,
     save_path: str,
-    gguf_path: str | None = None,
 ) -> list[str]:
-    command = [
+    return [
         python_exe, "-m", "mlx_lm", "fuse",
         "--model", base_repo,
         "--adapter-path", adapter_path,
         "--save-path", save_path,
     ]
-    if gguf_path:
-        command += ["--gguf-path", gguf_path]
-    return command
 
 
 def build_convert_command(

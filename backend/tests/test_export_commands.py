@@ -13,11 +13,6 @@ def test_fuse_command_basic() -> None:
     assert "--gguf-path" not in joined
 
 
-def test_fuse_command_with_gguf() -> None:
-    cmd = build_fuse_command("py", "base/m", "/a", "/out/fused", gguf_path="/out/model.gguf")
-    assert "--gguf-path /out/model.gguf" in " ".join(cmd)
-
-
 def test_convert_command_quantizes() -> None:
     cmd = build_convert_command("py", hf_path="/out/fused", mlx_path="/out/mlx", q_bits=4)
     assert cmd[:4] == ["py", "-m", "mlx_lm", "convert"]

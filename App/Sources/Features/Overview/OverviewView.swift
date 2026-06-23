@@ -114,9 +114,9 @@ struct OverviewView: View {
         switch s {
         case .hub: "Download a small model from HuggingFace."
         case .datasets: "Turn your data into training examples."
-        case .train: "Train a LoRA on the GPU and watch it learn."
+        case .train: "Train or finetune on the GPU and watch it learn."
         case .playground: "Chat with your finetuned model."
-        case .export: "Export to safetensors, MLX, or GGUF — or push to the Hub."
+        case .export: "Export to safetensors or MLX — or push to the Hub."
         default: s.subtitle
         }
     }
