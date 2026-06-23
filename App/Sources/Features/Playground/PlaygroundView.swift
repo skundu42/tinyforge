@@ -28,16 +28,17 @@ struct PlaygroundView: View {
                         }
                         if !model.scratchRuns.isEmpty {
                             Picker("From-scratch model", selection: Binding(
-                                get: { model.modelRepo },
+                                get: {
+                                    model.scratchRuns.contains { $0.adapterPath == model.modelRepo }
+                                        ? model.modelRepo : ""
+                                },
                                 set: { id in
                                     if let run = model.scratchRuns.first(where: { $0.adapterPath == id }) {
                                         model.selectScratchModel(run)
-                                    } else {
-                                        model.modelRepo = id
                                     }
                                 })
                             ) {
-                                Text("Downloaded base model").tag(model.modelRepo)
+                                Text("None").tag("")
                                 ForEach(model.scratchRuns) { Text($0.name).tag($0.adapterPath) }
                             }
                         }
