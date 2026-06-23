@@ -1,4 +1,4 @@
-from tinyforge.train.models import LM_PRESETS, RunConfig, StartRunRequest, apply_preset
+from tinyforge.train.models import RunConfig, StartRunRequest, apply_preset
 
 
 def test_engine_literal_allows_mlx_and_lm() -> None:
