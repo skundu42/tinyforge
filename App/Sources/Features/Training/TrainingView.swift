@@ -29,8 +29,7 @@ struct TrainingView: View {
 
                 Picker("Engine", selection: $model.engine) {
                     Text("LLM LoRA (MLX)").tag("mlx")
-                    Text("From-scratch").tag("torch")
-                    Text("Vision (HF)").tag("vision")
+                    Text("Tiny LM from scratch").tag("lm")
                 }
                 .pickerStyle(.segmented)
 
@@ -59,10 +58,38 @@ struct TrainingView: View {
                         Text("Full").tag("full")
                     }
                     .pickerStyle(.segmented)
-                } else if model.engine == "vision" {
-                    hint("Finetunes a small ViT image classifier on the MPS GPU with HuggingFace Trainer (synthetic image task).")
                 } else {
-                    hint("Trains a small MLP on a synthetic task on the MPS GPU — a from-scratch demo of the PyTorch engine.")
+                    hint("Trains a small Llama-style LM from scratch on your dataset (Apple Silicon GPU). Pick a size; advanced knobs override it.")
+                    if model.datasets.isEmpty {
+                        hint("Prepare a dataset in the Datasets tab first.")
+                    } else {
+                        Picker("Dataset", selection: $model.datasetId) {
+                            Text("Select…").tag("")
+                            ForEach(model.datasets) { Text($0.name).tag($0.id) }
+                        }
+                    }
+                    Picker("Model size", selection: $model.modelSize) {
+                        Text("Tiny (~1–3M)").tag("tiny")
+                        Text("Small (~8–15M)").tag("small")
+                        Text("Medium (~30–60M)").tag("medium")
+                        Text("Advanced").tag("custom")
+                    }
+                    .pickerStyle(.segmented)
+                    if model.modelSize == "custom" {
+                        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+                            GridRow {
+                                stepper("Hidden size", $model.hiddenSize, 64...1024, step: 64)
+                                stepper("Layers", $model.numLayers, 1...24)
+                            }
+                            GridRow {
+                                stepper("Heads", $model.numHeads, 1...16)
+                                stepper("Context", $model.contextLength, 64...2048, step: 64)
+                            }
+                            GridRow {
+                                stepper("Vocab size", $model.vocabSize, 1000...50000, step: 1000)
+                            }
+                        }
+                    }
                 }
 
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
