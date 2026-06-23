@@ -20,12 +20,25 @@ struct TrainingModelTests {
         #expect(!sut.canStart)
     }
 
-    @Test func torchEngineCanStartWithoutModelOrDataset() {
+    @Test func lmEngineCanStartWithDatasetButNoModel() {
         let api = FakeBackendAPI()
         let sut = TrainingModel(api: api, events: FakeRunEventStreaming(events: []))
         sut.name = "scratch"
-        sut.engine = "torch"  // from-scratch needs neither a model nor a dataset
+        sut.engine = "lm"
+        sut.datasetId = "ds1"
+        sut.modelRepo = ""        // from-scratch needs no base model…
         #expect(sut.canStart)
+        sut.datasetId = ""        // …but it does need a dataset
+        #expect(!sut.canStart)
+    }
+
+    @Test func lmStartSendsModelSizeAndKnobs() async {
+        let api = FakeBackendAPI()
+        let sut = TrainingModel(api: api, events: FakeRunEventStreaming(events: []))
+        sut.name = "scratch"; sut.engine = "lm"; sut.datasetId = "ds1"; sut.modelSize = "tiny"
+        await sut.start()
+        #expect(api.startedRequest?.engine == "lm")
+        #expect(api.startedRequest?.modelSize == "tiny")
     }
 
     @Test func startSendsRequestAndIngestsMetrics() async {

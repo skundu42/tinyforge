@@ -15,6 +15,11 @@ struct StartRunRequest: Codable, Sendable {
     var maxSeqLength: Int = 512
     var gradCheckpoint: Bool = true
     var seed: Int = 0
+    var modelSize: String = "small"
+    var hiddenSize: Int = 256
+    var numHeads: Int = 8
+    var vocabSize: Int = 8000
+    var contextLength: Int = 512
 
     enum CodingKeys: String, CodingKey {
         case name, iters, seed, engine
@@ -28,6 +33,11 @@ struct StartRunRequest: Codable, Sendable {
         case stepsPerEval = "steps_per_eval"
         case maxSeqLength = "max_seq_length"
         case gradCheckpoint = "grad_checkpoint"
+        case modelSize = "model_size"
+        case hiddenSize = "hidden_size"
+        case numHeads = "num_heads"
+        case vocabSize = "vocab_size"
+        case contextLength = "context_length"
     }
 }
 

@@ -8,7 +8,7 @@ import Observation
 final class TrainingModel: LoadErrorReporting {
     // Config
     var name = ""
-    var engine = "mlx"  // mlx (LLM LoRA) | torch (from-scratch MPS)
+    var engine = "mlx"  // mlx (LLM LoRA) | lm (from-scratch tiny LM)
     var modelRepo = ""
     var datasetId = ""
     var fineTuneType = "lora"
@@ -17,6 +17,11 @@ final class TrainingModel: LoadErrorReporting {
     var batchSize = 1
     var learningRate = 1e-5
     var maxSeqLength = 512
+    var modelSize = "small"
+    var hiddenSize = 256
+    var numHeads = 8
+    var vocabSize = 8000
+    var contextLength = 512
 
     // Available inputs
     private(set) var datasets: [RegisteredDataset] = []
@@ -50,7 +55,8 @@ final class TrainingModel: LoadErrorReporting {
     var isLLM: Bool { engine == "mlx" }
     var canStart: Bool {
         guard !name.isEmpty, !isRunning else { return false }
-        return isLLM ? (!modelRepo.isEmpty && !datasetId.isEmpty) : true
+        if isLLM { return !modelRepo.isEmpty && !datasetId.isEmpty }
+        return !datasetId.isEmpty  // lm: from-scratch needs data, not a base model
     }
 
     func loadInputs() async {
@@ -69,7 +75,9 @@ final class TrainingModel: LoadErrorReporting {
         let request = StartRunRequest(
             name: name, modelRepo: modelRepo, datasetId: datasetId, engine: engine,
             fineTuneType: fineTuneType, numLayers: numLayers, batchSize: batchSize, iters: iters,
-            learningRate: learningRate, maxSeqLength: maxSeqLength
+            learningRate: learningRate, maxSeqLength: maxSeqLength,
+            modelSize: modelSize, hiddenSize: hiddenSize, numHeads: numHeads,
+            vocabSize: vocabSize, contextLength: contextLength
         )
         do {
             let record = try await api.startRun(request)
